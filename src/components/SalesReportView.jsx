@@ -7,12 +7,8 @@ import {
   HANBAI_ITEMS, emptyHanbaiUchiwake, sumHanbaiUchiwake,
   emptyTarget,
   getOfficeReport, updateOfficeReport, updateRepEntry, addRep, removeRep,
-  applyImportedSalesFigures, applyImportedSalesFiguresMultiMonth, applyImportedHanbaiFigures, applyImportedVisitFigures, pickOfficeData, getYearMonths, listFiscalYears, DEFAULT_FISCAL_YEAR,
+  getYearMonths, listFiscalYears, DEFAULT_FISCAL_YEAR,
 } from '../salesReportData'
-import { parseSalesWorkbookAuto } from '../salesReportExcelImport'
-import { parseVisitLogWorkbook } from '../visitLogImport'
-import { parseProviderSalesWorkbook } from '../providerSalesExcelImport'
-import { applyImportedProviderSales } from '../providerSalesData'
 import { downloadElementPdf } from '../pdf-export'
 
 const yen = (n) => `${Math.round(Number(n) || 0).toLocaleString('ja-JP')}`
@@ -427,8 +423,6 @@ function RepEditView({ repName, entry, onChange, goals, monthKeyOfEntry, fiscalY
 function MonthlyReportTab({ officeName, report, fiscalYear, setFiscalYear, monthKey, setMonthKey, refresh }) {
   const [activeRep, setActiveRep] = useState('__office__')
   const [newRepName, setNewRepName] = useState('')
-  const [importBusy, setImportBusy] = useState(false)
-  const [importMessage, setImportMessage] = useState(null) // { type: 'ok'|'error', text }
   const monthData = getYearMonths(report, fiscalYear)[monthKey] || { reps: {} }
   const reps = report.repNames
   const calendarYear = fiscalCalendarYear(fiscalYear, monthKey)
@@ -437,69 +431,6 @@ function MonthlyReportTab({ officeName, report, fiscalYear, setFiscalYear, month
   function patchRep(repName, patch) {
     updateRepEntry(officeName, fiscalYear, monthKey, repName, patch)
     refresh()
-  }
-
-  async function importOneFile(file) {
-    if (/\.(xlsx|xlsm)$/i.test(file.name)) {
-      let result
-      try { result = await parseSalesWorkbookAuto(file) }
-      catch (firstError) {
-        if (/アプリが更新されたため/.test(firstError.message)) throw firstError
-        // 売上状況報告書／担当別売上実績／商品分類別販売売上のいずれでもなければ、居宅別売上推移表として試す。
-        const trend = await parseProviderSalesWorkbook(file)
-        const officeEntry = pickOfficeData(trend.offices, officeName)[officeName]
-        const summary = applyImportedProviderSales(officeName, officeEntry)
-        return `居宅別売上推移表：${trend.fiscalYear}年度分を${summary.providerCount}件の居宅に反映（居宅カレンダー・実績分析に表示されます）`
-      }
-      if (result.type === 'status') {
-        const targetYear = result.fiscalYear ?? fiscalYear
-        const targetMonth = result.monthKey ?? monthKey
-        const summary = applyImportedSalesFigures(targetYear, targetMonth, pickOfficeData(result.data, officeName))
-        const total = summary.updated.length + summary.created.length
-        const note = summary.created.length ? `（新規追加：${summary.created.join('、')}）` : ''
-        return `売上状況報告書：${targetYear}年度${MONTH_LABELS[targetMonth]}分を${total}件の担当者に反映${note}`
-      }
-      if (result.type === 'hanbaiBunrui') {
-        const targetYear = result.fiscalYear ?? fiscalYear
-        const targetMonth = result.monthKey ?? monthKey
-        const summary = applyImportedHanbaiFigures(targetYear, targetMonth, pickOfficeData(result.data, officeName))
-        const total = summary.updated.length + summary.created.length
-        const note = summary.created.length ? `（新規追加：${summary.created.join('、')}）` : ''
-        return `商品分類別販売売上：${targetYear}年度${MONTH_LABELS[targetMonth]}分を${total}件の担当者に反映${note}`
-      }
-      const targetYear = result.fiscalYear ?? fiscalYear
-      const summary = applyImportedSalesFiguresMultiMonth(targetYear, pickOfficeData(result.data, officeName))
-      const total = summary.updated.length + summary.created.length
-      const note = summary.created.length ? `（新規追加：${summary.created.join('、')}）` : ''
-      return `担当別売上実績：${targetYear}年度${summary.months.map((k) => MONTH_LABELS[k]).join('・')}分を${total}件の担当者に反映${note}`
-    }
-    const result = await parseVisitLogWorkbook(file)
-    const summary = applyImportedVisitFigures(pickOfficeData(result.offices, officeName))
-    const total = summary.updated.length + summary.created.length
-    const note = summary.created.length ? `（新規追加：${summary.created.join('、')}）` : ''
-    return `訪問ログ：${result.matchedRows}/${result.totalRows}件を${total}件の担当者に反映${note}`
-  }
-
-  async function handleImportFile(e) {
-    const files = Array.from(e.target.files || [])
-    e.target.value = ''
-    if (!files.length) return
-    setImportBusy(true)
-    setImportMessage(null)
-    const results = []
-    const errors = []
-    for (const file of files) {
-      try {
-        results.push(await importOneFile(file))
-      } catch (err) {
-        errors.push(`${file.name}：${err.message || '取り込みに失敗しました。'}`)
-      }
-    }
-    refresh()
-    setImportBusy(false)
-    if (results.length && !errors.length) setImportMessage({ type: 'ok', text: results.join('／') })
-    else if (results.length && errors.length) setImportMessage({ type: 'ok', text: `${results.join('／')}\n（一部失敗：${errors.join('、')}）` })
-    else setImportMessage({ type: 'error', text: errors.join('、') })
   }
 
   const currentEntry = activeRep !== '__office__' ? (monthData.reps[activeRep] || null) : null
@@ -518,25 +449,10 @@ function MonthlyReportTab({ officeName, report, fiscalYear, setFiscalYear, month
       </div>
       <div className="srv-month-title">{calendarYear}年{MONTH_LABELS[monthKey]}　【{officeName}】</div>
 
-      <div className="srv-import-card">
-        <label className="srv-import-card-btn">
-          <Icon name="upload" size={24} />
-          <span>{importBusy ? '取り込み中…' : 'Excelを取り込む'}</span>
-          <input type="file" accept=".xlsx,.xlsm,.xls,.csv" multiple disabled={importBusy} onChange={handleImportFile} hidden />
-        </label>
-        <div className="srv-import-card-body">
-          <div className="srv-import-card-title">取り込めるファイル（複数まとめて選択できます）</div>
-          <ul className="srv-import-list">
-            <li>売上状況報告書（新規納品・前月回収・当月回収・目標額）</li>
-            <li>営業所／担当別売上実績（レンタル・住宅改修・商品販売の予算と実績）</li>
-            <li>販売区分・商品分類別 販売売上（住宅改修／福祉用具／紙おむつ／消耗品の件数・売上）</li>
-            <li>居宅別売上推移表（居宅ごとの月次売上。居宅カレンダー・実績分析に反映）</li>
-            <li>訪問ログ（担当者別の訪問実績・全月分に自動反映）</li>
-          </ul>
-          <span className="srv-import-hint">年度・月・営業所はファイルの中身から自動判定し、「{officeName}」のデータだけを反映します。同じ月を取り込み直すと上書きされます。</span>
-        </div>
+      <div className="srv-import-hintbar">
+        <Icon name="info" size={15}/>
+        <span>Excelの取り込みは画面上部「Excelを取り込む」ボタンから行えます（売上状況報告書・担当別売上実績・商品分類別販売売上・居宅別売上推移表・訪問ログに対応、年度・月・営業所は自動判定）。</span>
       </div>
-      {importMessage && <div className={`srv-import-msg ${importMessage.type}`}>{importMessage.text}</div>}
 
       <div className="srv-rep-tabs">
         <button className={activeRep === '__office__' ? 'active office' : 'office'} onClick={() => setActiveRep('__office__')}>営業所合計</button>
@@ -842,10 +758,10 @@ const SUB_TABS = [
   ['annual', '年間目標進捗'],
 ]
 
-export function SalesReportView({ officeName, fiscalYear: appFiscalYear }) {
+export function SalesReportView({ officeName, fiscalYear: appFiscalYear, importAction, refreshKey }) {
   const [tick, setTick] = useState(0)
   const refresh = () => setTick((t) => t + 1)
-  const report = useMemo(() => getOfficeReport(officeName), [officeName, tick])
+  const report = useMemo(() => getOfficeReport(officeName), [officeName, tick, refreshKey])
   const [subTab, setSubTab] = useState('monthly')
   const [fiscalYear, setFiscalYear] = useState(appFiscalYear || DEFAULT_FISCAL_YEAR)
   const [monthKey, setMonthKey] = useState('04')
@@ -884,6 +800,7 @@ export function SalesReportView({ officeName, fiscalYear: appFiscalYear }) {
     <div className="srv-root" id="srv-print-area">
       <div className="page-header">
         <div><h1>営業月報</h1><p>担当者ごとに入力すると、営業所全体の数字が自動で集計されます</p></div>
+        <div className="page-header-actions">{importAction}</div>
       </div>
       <div className="srv-print-bar">
         <button onClick={handlePrint}>印刷</button>

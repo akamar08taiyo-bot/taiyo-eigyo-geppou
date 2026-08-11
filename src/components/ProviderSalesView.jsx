@@ -4,8 +4,9 @@ import { getOfficeProviderSales, findProviderSales } from '../providerSalesData'
 
 const decimal = (value) => value == null ? '—' : Number(value).toFixed(1)
 const yen = (value) => `${Math.round(Number(value) || 0).toLocaleString('ja-JP')}円`
+const yenK = (value) => `${Math.round((Number(value) || 0) / 1000).toLocaleString('ja-JP')}千円`
 
-// 比較月の1か月前（年またぎ対応）の 'YYYY-MM' キーを返す。
+// 'YYYY-MM' の1か月前（年またぎ対応）を返す。
 function previousMonthKey(monthKey) {
   if (!monthKey) return null
   const [year, month] = monthKey.split('-').map(Number)
@@ -13,9 +14,164 @@ function previousMonthKey(monthKey) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
 }
 
-// 居宅ごとに「訪問件数の増減」と「売上の増減」を突き合わせる。
-// 訪問と売上が逆方向に動いている居宅（訪問が減っているのに売上は増えている等）を
-// divergent（要確認）としてマークし、営業視点で深堀りすべき先を絞り込めるようにする。
+/* ============================================================
+   「居宅別売上推移表」単体で読み取れる分析（居宅カレンダーの訪問実績を取り込んでいなくても使える）。
+   直近で実績が入っている月を自動判定し、前月比で伸びている居宅・減っている居宅・新規／取引ゼロになった居宅・
+   売上規模別セグメント・担当者別構成を出す。
+============================================================ */
+function latestNonZeroMonth(officeSales) {
+  let latest = null
+  for (const entry of Object.values(officeSales.providers || {})) {
+    for (const [monthKey, value] of Object.entries(entry.monthlySales || {})) {
+      if (value > 0 && (!latest || monthKey > latest)) latest = monthKey
+    }
+  }
+  return latest
+}
+
+const SEGMENT_DEFS = [
+  ['今月取引ゼロ', (v) => v === 0],
+  ['10万円以下', (v) => v > 0 && v <= 100000],
+  ['10〜30万円', (v) => v > 100000 && v <= 300000],
+  ['30〜50万円', (v) => v > 300000 && v <= 500000],
+  ['50万円超', (v) => v > 500000],
+]
+
+function buildStandaloneAnalysis(officeSales) {
+  const providers = officeSales.providers || {}
+  const latest = latestNonZeroMonth(officeSales)
+  if (!latest) return null
+  const prev = previousMonthKey(latest)
+  const rows = Object.entries(providers).map(([name, entry]) => {
+    const cur = entry.monthlySales?.[latest] || 0
+    const prevValue = entry.monthlySales?.[prev] || 0
+    const diff = cur - prevValue
+    const diffRate = prevValue ? Math.round((diff / prevValue) * 1000) / 10 : null
+    return { name, repName: entry.repName || '（未設定）', cur, prev: prevValue, diff, diffRate }
+  })
+  const active = rows.filter((r) => r.cur > 0)
+  const totalCur = rows.reduce((sum, r) => sum + r.cur, 0)
+  const totalPrev = rows.reduce((sum, r) => sum + r.prev, 0)
+  const growing = rows.filter((r) => r.diff > 0).sort((a, b) => b.diff - a.diff)
+  const declining = rows.filter((r) => r.diff < 0).sort((a, b) => a.diff - b.diff)
+  const newOnes = rows.filter((r) => r.prev === 0 && r.cur > 0).sort((a, b) => b.cur - a.cur)
+  const lostOnes = rows.filter((r) => r.prev > 0 && r.cur === 0).sort((a, b) => b.prev - a.prev)
+  const segments = SEGMENT_DEFS.map(([label, test]) => {
+    const matched = rows.filter((r) => test(r.cur))
+    return { label, count: matched.length, total: matched.reduce((sum, r) => sum + r.cur, 0) }
+  })
+  const repMap = {}
+  for (const r of active) repMap[r.repName] = (repMap[r.repName] || 0) + r.cur
+  const repTotals = Object.entries(repMap).sort((a, b) => b[1] - a[1])
+  return { latest, prev, rows, activeCount: active.length, totalCur, totalPrev, growing, declining, newOnes, lostOnes, segments, repTotals }
+}
+
+function Difference({ value }) {
+  const tone = value > 0 ? 'positive' : value < 0 ? 'negative' : 'neutral'
+  return <span className={`comparison-difference ${tone}`}>{value > 0 ? '+' : ''}{decimal(value)}回</span>
+}
+
+function YenDiff({ value }) {
+  const tone = value > 0 ? 'positive' : value < 0 ? 'negative' : 'neutral'
+  return <span className={`comparison-difference ${tone}`}>{value > 0 ? '+' : ''}{yen(value)}</span>
+}
+
+function monthLabel(monthKey) {
+  if (!monthKey) return ''
+  const [y, m] = monthKey.split('-')
+  return `${y}年${Number(m)}月`
+}
+
+function Kpi({ label, value, unit, accent }) {
+  return <div className={`kpi-card ${accent ? 'accent' : ''}`}><span>{label}</span><strong>{value}<small>{unit}</small></strong></div>
+}
+
+// 「居宅別売上推移表」（Excel取込）だけで完結する分析セクション。訪問データがなくても表示できる。
+function StandaloneAnalysisSection({ officeName, scopeLabel }) {
+  const officeSales = getOfficeProviderSales(officeName)
+  const analysis = useMemo(() => buildStandaloneAnalysis(officeSales), [officeSales])
+
+  if (!analysis) {
+    return (
+      <section className="staff-panel provider-sales-panel">
+        <div className="panel-heading"><div><h2>居宅別売上推移表の分析</h2><span>伸びている居宅・減っている居宅・売上規模別の内訳を確認</span></div></div>
+        <div className="provider-sales-empty"><Icon name="info" size={16}/><span>上の「Excelを取り込む」から「居宅別売上推移表」を取り込むと、ここに分析結果が表示されます。</span></div>
+      </section>
+    )
+  }
+  const { latest, prev, activeCount, totalCur, totalPrev, growing, declining, newOnes, lostOnes, segments, repTotals } = analysis
+  const totalDiff = totalCur - totalPrev
+  const maxSegmentTotal = Math.max(1, ...segments.map((s) => s.total))
+
+  return <>
+    <section className="staff-panel provider-sales-panel">
+      <div className="panel-heading">
+        <div><h2>居宅別売上推移表の分析</h2><span>{monthLabel(prev)}→{monthLabel(latest)}の実績をもとに集計（訪問記録がなくても表示されます）</span></div>
+        <span className="chart-unit">対象：{scopeLabel}</span>
+      </div>
+      <section className="kpi-grid sales-kpi-grid">
+        <Kpi label={`${monthLabel(latest)}売上合計`} value={yenK(totalCur)} unit=""/>
+        <Kpi label="取引のある居宅数" value={activeCount} unit="件"/>
+        <Kpi label="前月比" value={`${totalDiff >= 0 ? '+' : ''}${yenK(totalDiff)}`} unit="" accent/>
+        <Kpi label="1居宅あたり平均" value={activeCount ? yenK(totalCur / activeCount) : '—'} unit=""/>
+      </section>
+    </section>
+
+    <section className="analysis-detail-grid">
+      <div className="chart-panel">
+        <div className="panel-heading"><div><h2>伸びている居宅</h2><span>前月比・増加額が大きい順（上位10件）</span></div></div>
+        {growing.length === 0 ? <div className="provider-sales-empty"><Icon name="info" size={16}/><span>前月比で増加している居宅はありません。</span></div> : (
+          <div className="responsive-table"><table className="staff-table"><thead><tr><th>居宅</th><th>担当者</th><th>{monthLabel(latest)}</th><th>前月差</th></tr></thead><tbody>
+            {growing.slice(0, 10).map((r) => <tr key={r.name}><th>{r.name}</th><td>{r.repName}</td><td>{yen(r.cur)}</td><td><YenDiff value={r.diff}/>{r.diffRate != null && <small> （+{r.diffRate}%）</small>}</td></tr>)}
+          </tbody></table></div>
+        )}
+      </div>
+      <div className="chart-panel">
+        <div className="panel-heading"><div><h2>減っている居宅</h2><span>前月比・減少額が大きい順（上位10件）</span></div></div>
+        {declining.length === 0 ? <div className="provider-sales-empty"><Icon name="info" size={16}/><span>前月比で減少している居宅はありません。</span></div> : (
+          <div className="responsive-table"><table className="staff-table"><thead><tr><th>居宅</th><th>担当者</th><th>{monthLabel(latest)}</th><th>前月差</th></tr></thead><tbody>
+            {declining.slice(0, 10).map((r) => <tr key={r.name}><th>{r.name}</th><td>{r.repName}</td><td>{yen(r.cur)}</td><td><YenDiff value={r.diff}/>{r.diffRate != null && <small> （{r.diffRate}%）</small>}</td></tr>)}
+          </tbody></table></div>
+        )}
+      </div>
+    </section>
+
+    <section className="staff-panel">
+      <div className="panel-heading"><div><h2>売上規模別の内訳</h2><span>{monthLabel(latest)}時点・居宅を売上規模で分類</span></div></div>
+      <div className="frequency-list">
+        {segments.map((s) => <div key={s.label}><span>{s.label}</span><div><i style={{ width: `${s.total / maxSegmentTotal * 100}%` }}/></div><strong>{s.count}件・{yenK(s.total)}</strong></div>)}
+      </div>
+    </section>
+
+    <section className="analysis-detail-grid">
+      <div className="chart-panel">
+        <div className="panel-heading"><div><h2>新規に取引が始まった居宅</h2><span>前月0円→{monthLabel(latest)}に売上あり</span></div></div>
+        {newOnes.length === 0 ? <div className="provider-sales-empty"><Icon name="info" size={16}/><span>該当する居宅はありません。</span></div> : (
+          <div className="responsive-table"><table className="staff-table"><thead><tr><th>居宅</th><th>担当者</th><th>{monthLabel(latest)}</th></tr></thead><tbody>
+            {newOnes.map((r) => <tr key={r.name}><th>{r.name}</th><td>{r.repName}</td><td>{yen(r.cur)}</td></tr>)}
+          </tbody></table></div>
+        )}
+      </div>
+      <div className="chart-panel">
+        <div className="panel-heading"><div><h2>取引がゼロになった居宅</h2><span>前月は売上あり→{monthLabel(latest)}は0円</span></div></div>
+        {lostOnes.length === 0 ? <div className="provider-sales-empty"><Icon name="info" size={16}/><span>該当する居宅はありません。</span></div> : (
+          <div className="responsive-table"><table className="staff-table"><thead><tr><th>居宅</th><th>担当者</th><th>前月</th></tr></thead><tbody>
+            {lostOnes.map((r) => <tr key={r.name}><th>{r.name}</th><td>{r.repName}</td><td>{yen(r.prev)}</td></tr>)}
+          </tbody></table></div>
+        )}
+      </div>
+    </section>
+
+    {repTotals.length > 0 && <section className="staff-panel">
+      <div className="panel-heading"><div><h2>担当者別 売上構成</h2><span>{monthLabel(latest)}・売上が多い順</span></div></div>
+      <div className="responsive-table"><table className="staff-table"><thead><tr><th>担当者</th><th>売上</th><th>構成比</th></tr></thead><tbody>
+        {repTotals.map(([name, total]) => <tr key={name}><th>{name}</th><td>{yen(total)}</td><td>{totalCur ? `${Math.round(total / totalCur * 1000) / 10}%` : '—'}</td></tr>)}
+      </tbody></table></div>
+    </section>}
+  </>
+}
+
+// 比較月の1か月前（年またぎ対応）の 'YYYY-MM' キーを返す。訪問実績（analytics）との突合用。
 function buildProviderSalesRows(analytics, officeName) {
   const comparisonMonth = analytics?.comparisonMonth
   if (!comparisonMonth) return { rows: [], comparisonMonth: null, prevMonth: null }
@@ -42,19 +198,10 @@ function buildProviderSalesRows(analytics, officeName) {
   return { rows, comparisonMonth, prevMonth }
 }
 
-function Difference({ value }) {
-  const tone = value > 0 ? 'positive' : value < 0 ? 'negative' : 'neutral'
-  return <span className={`comparison-difference ${tone}`}>{value > 0 ? '+' : ''}{decimal(value)}回</span>
-}
-
-function YenDiff({ value }) {
-  const tone = value > 0 ? 'positive' : value < 0 ? 'negative' : 'neutral'
-  return <span className={`comparison-difference ${tone}`}>{value > 0 ? '+' : ''}{yen(value)}</span>
-}
-
 // 「居宅別売上推移表」（Excel取込）を、居宅カレンダーの実訪問データ（analytics）と居宅名で突き合わせ、
 // 訪問件数の増減と売上の増減が逆方向に動いている居宅（要確認先）を優先的に見せるページ。
-export function ProviderSalesView({ analytics, fiscalYear, setFiscalYear, officeName, loading, scopeLabel, staff, selectedStaffId, setSelectedStaffId, canSelectStaff }) {
+// 訪問データが無くても、上部の「居宅別売上推移表の分析」だけで売上推移を確認できる。
+export function ProviderSalesView({ analytics, fiscalYear, setFiscalYear, officeName, loading, scopeLabel, staff, selectedStaffId, setSelectedStaffId, canSelectStaff, importAction }) {
   const printableStaff = staff.filter((person) => person.active && person.role === 'staff')
   const [comparisonYear, comparisonMonth] = (analytics?.comparisonMonth || '').split('-')
   const comparisonLabel = comparisonYear ? `${comparisonYear}年${Number(comparisonMonth)}月` : '今月'
@@ -66,7 +213,7 @@ export function ProviderSalesView({ analytics, fiscalYear, setFiscalYear, office
   const totalSalesDiff = withSales.reduce((sum, row) => sum + (row.salesDiff || 0), 0)
 
   return <>
-    <div className="page-header"><div><h1>居宅売上推移分析</h1><p>居宅ごとの訪問件数と売上の動きを突き合わせて確認</p></div></div>
+    <div className="page-header"><div><h1>居宅売上推移分析</h1><p>居宅ごとの売上推移と、訪問件数との突き合わせを確認</p></div><div className="page-header-actions">{importAction}</div></div>
     <section className="analysis-scope">
       <div className="analysis-year-switch">
         <button className="icon-button" aria-label="前年度" onClick={() => setFiscalYear(fiscalYear - 1)}><Icon name="left"/></button>
@@ -80,17 +227,19 @@ export function ProviderSalesView({ analytics, fiscalYear, setFiscalYear, office
       </div>
     </section>
 
+    <StandaloneAnalysisSection officeName={officeName} scopeLabel={scopeLabel}/>
+
     <section className="staff-panel provider-sales-panel">
       <div className="panel-heading">
-        <div><h2>居宅別 訪問件数×売上 推移比較</h2><span>「居宅別売上推移表」を取り込むと、訪問件数と売上の動きが逆になっている居宅を確認できます</span></div>
+        <div><h2>居宅別 訪問件数×売上 推移比較</h2><span>居宅カレンダーの訪問実績と突き合わせ、訪問と売上の動きが逆になっている居宅を確認できます</span></div>
         <span className="chart-unit">対象：{scopeLabel}</span>
       </div>
       {!rows.length ? (
-        <div className="provider-sales-empty"><Icon name="info" size={16}/><span>対象年度の訪問記録がありません。まず「営業月報」タブから訪問ログ、または居宅カレンダー側でExcelを取り込んでください。</span></div>
+        <div className="provider-sales-empty"><Icon name="info" size={16}/><span>対象年度の訪問記録がありません。居宅カレンダー側でExcelを取り込むと、ここで売上と突き合わせて確認できます。</span></div>
       ) : withSales.length === 0 ? (
         <div className="provider-sales-empty">
           <Icon name="info" size={16}/>
-          <span>売上データが取り込まれていません。上のタブから「居宅別売上推移表」を取り込むと、ここに反映されます。</span>
+          <span>売上データが取り込まれていません。上の「Excelを取り込む」から「居宅別売上推移表」を取り込むと、ここに反映されます。</span>
         </div>
       ) : (
         <>

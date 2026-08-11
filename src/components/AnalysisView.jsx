@@ -62,7 +62,7 @@ function salesInsights(analytics) {
   return [momentum, concentrationInsight, providerInsight, efficiencyInsight]
 }
 
-export function AnalysisView({ fiscalYear, setFiscalYear, analytics, loading, scopeLabel, staff, selectedStaffId, setSelectedStaffId, canSelectStaff, onPdf }) {
+export function AnalysisView({ fiscalYear, setFiscalYear, analytics, loading, scopeLabel, staff, selectedStaffId, setSelectedStaffId, canSelectStaff, onPdf, importAction }) {
   const summary = analytics?.summary || {}
   const insights = useMemo(() => salesInsights(analytics), [analytics])
   const frequencyMax = Math.max(1, ...(analytics?.frequencyBands || []).map((item) => item.count))
@@ -70,7 +70,7 @@ export function AnalysisView({ fiscalYear, setFiscalYear, analytics, loading, sc
   const [comparisonYear, comparisonMonth] = (analytics?.comparisonMonth || '').split('-')
   const comparisonLabel = comparisonYear ? `${comparisonYear}年${Number(comparisonMonth)}月` : '今月'
   return <>
-    <div className="page-header"><div><h1>実績分析</h1><p>訪問量・継続性・訪問配分を営業視点で確認</p></div>{onPdf && <div className="page-header-actions"><Button icon="pdf" onClick={onPdf}>対象月をPDF</Button></div>}</div>
+    <div className="page-header"><div><h1>実績分析</h1><p>訪問量・継続性・訪問配分を営業視点で確認</p></div><div className="page-header-actions">{importAction}{onPdf && <Button icon="pdf" onClick={onPdf}>対象月をPDF</Button>}</div></div>
     <section className="analysis-scope"><div className="analysis-year-switch"><button className="icon-button" aria-label="前年度" onClick={() => setFiscalYear(fiscalYear - 1)}><Icon name="left"/></button><strong>{fiscalYear}年度</strong><button className="icon-button" aria-label="次年度" onClick={() => setFiscalYear(fiscalYear + 1)}><Icon name="right"/></button><span>4月〜翌年3月</span></div><div className="analysis-scope-meta"><label><span>分析対象</span><span className="select-wrap"><select aria-label="分析対象の営業員" value={selectedStaffId} onChange={(event) => setSelectedStaffId(event.target.value)} disabled={!canSelectStaff || loading}>{canSelectStaff && <option value="">営業所全体</option>}{printableStaff.map((person) => <option key={person.id} value={person.id}>{person.name}</option>)}</select><Icon name="down" size={15}/></span></label>{loading && <span className="status-line"><span className="spinner small"/>集計中…</span>}</div></section>
 
     <section className="kpi-grid sales-kpi-grid">

@@ -39,6 +39,7 @@ export default function App() {
   const [analyticsLoading, setAnalyticsLoading] = useState(false)
   const [toast, setToast] = useState(null)
   const [importBusy, setImportBusy] = useState(false)
+  const [importVersion, setImportVersion] = useState(0)
 
   function notify(message, type = 'success') {
     setToast({ message, type })
@@ -136,7 +137,7 @@ export default function App() {
       catch (error) { errors.push(`${file.name}：${error.message || '取り込みに失敗しました。'}`) }
     }
     setImportBusy(false)
-    if (results.length) notify(results.join(' / '), errors.length ? 'error' : 'success')
+    if (results.length) { notify(results.join(' / '), errors.length ? 'error' : 'success'); setImportVersion((v) => v + 1) }
     if (errors.length && !results.length) notify(errors.join('、'), 'error')
     else if (errors.length) notify(`一部失敗：${errors.join('、')}`, 'error')
   }
@@ -147,15 +148,25 @@ export default function App() {
   if (booting) return <div className="boot-screen"><span className="spinner"/><strong>営業月報を起動しています…</strong></div>
   if (!session) return <LoginScreen offices={offices} onLogin={handleLogin} busy={loginBusy} error={loginError}/>
 
+  // 各タブのタイトル横に大きく表示する共通の取込ボタン。対応ファイルの種類はツールチップで案内する。
+  const importButton = (
+    <label className="button button-primary button-import-highlight page-header-import-btn"
+      title="売上状況報告書・営業所／担当別売上実績・商品分類別販売売上・居宅別売上推移表・訪問ログを自動判定して取り込みます（複数選択可）">
+      <Icon name="upload" size={18}/>
+      <span>{importBusy ? '取り込み中…' : 'Excelを取り込む'}</span>
+      <input type="file" accept=".xlsx,.xlsm,.xls,.csv" multiple disabled={importBusy} onChange={handleImportFiles} hidden/>
+    </label>
+  )
+
   let pageContent
   if (activeTab === 'report') {
-    pageContent = <SalesReportView officeName={session.office.name} fiscalYear={fiscalYear}/>
+    pageContent = <SalesReportView officeName={session.office.name} fiscalYear={fiscalYear} importAction={importButton} refreshKey={importVersion}/>
   } else if (activeTab === 'analysis') {
-    pageContent = <AnalysisView fiscalYear={fiscalYear} setFiscalYear={setFiscalYear} analytics={analytics} loading={analyticsLoading} scopeLabel={scopeLabel} staff={staff} selectedStaffId={selectedStaffId} setSelectedStaffId={setSelectedStaffId} canSelectStaff={session.user.role !== 'staff'}/>
+    pageContent = <AnalysisView fiscalYear={fiscalYear} setFiscalYear={setFiscalYear} analytics={analytics} loading={analyticsLoading} scopeLabel={scopeLabel} staff={staff} selectedStaffId={selectedStaffId} setSelectedStaffId={setSelectedStaffId} canSelectStaff={session.user.role !== 'staff'} importAction={importButton}/>
   } else if (activeTab === 'providerSales') {
-    pageContent = <ProviderSalesView analytics={analytics} fiscalYear={fiscalYear} setFiscalYear={setFiscalYear} officeName={session.office.name} loading={analyticsLoading} scopeLabel={scopeLabel} staff={staff} selectedStaffId={selectedStaffId} setSelectedStaffId={setSelectedStaffId} canSelectStaff={session.user.role !== 'staff'}/>
+    pageContent = <ProviderSalesView analytics={analytics} fiscalYear={fiscalYear} setFiscalYear={setFiscalYear} officeName={session.office.name} loading={analyticsLoading} scopeLabel={scopeLabel} staff={staff} selectedStaffId={selectedStaffId} setSelectedStaffId={setSelectedStaffId} canSelectStaff={session.user.role !== 'staff'} importAction={importButton} refreshKey={importVersion}/>
   } else {
-    pageContent = <ProductAnalysisView officeName={session.office.name} fiscalYear={fiscalYear} setFiscalYear={setFiscalYear}/>
+    pageContent = <ProductAnalysisView officeName={session.office.name} fiscalYear={fiscalYear} setFiscalYear={setFiscalYear} importAction={importButton} refreshKey={importVersion}/>
   }
 
   return <div className="app-shell">
@@ -171,11 +182,6 @@ export default function App() {
         <div className="mobile-brand"><span className="brand-symbol">営</span>営業月報</div>
         <div className="office-context"><span>営業所</span><strong>{session.office.name}</strong></div>
         <div className="topbar-spacer"/>
-        <label className="button button-primary button-import-highlight topbar-import-btn">
-          <Icon name="upload" size={17}/>
-          <span>{importBusy ? '取り込み中…' : 'Excelを取り込む'}</span>
-          <input type="file" accept=".xlsx,.xlsm,.xls,.csv" multiple disabled={importBusy} onChange={handleImportFiles} hidden/>
-        </label>
         <div className="user-context"><Icon name="user"/><div><strong>{session.user.name}</strong><span>{roleLabel[session.user.role]}</span></div></div>
       </header>
       <div className="page-content">{pageContent}</div>
