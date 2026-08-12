@@ -8,6 +8,7 @@ import {
   emptyTarget,
   getOfficeReport, updateOfficeReport, updateRepEntry, addRep, removeRep,
   getYearMonths, listFiscalYears, DEFAULT_FISCAL_YEAR,
+  RENTAL_GROWTH_MONTHS, repBudgetOf, officeBudgetOf,
 } from '../salesReportData'
 import { downloadElementPdf } from '../pdf-export'
 
@@ -525,53 +526,104 @@ function GoalSettingTab({ officeName, report, refresh }) {
 }
 
 /* ============================== 売上予算表 ============================== */
+// 月別の金額を表示するだけの行（各月は入力値から自動計算するため編集不可）。
+function BudgetMonthRow({ label, values, growthMonths }) {
+  return (
+    <tr>
+      <th>{label}</th>
+      {MONTH_KEYS.map((monthKey, index) => (
+        <td key={monthKey} className={`srv-budget-month ${growthMonths && growthMonths.includes(monthKey) ? 'is-growth' : ''}`}>{yen(values[index])}</td>
+      ))}
+      <td className="srv-calc">{yen(values.reduce((sum, value) => sum + Number(value || 0), 0))}</td>
+    </tr>
+  )
+}
+
+function BudgetMonthTable({ data }) {
+  return (
+    <div className="srv-table-scroll">
+      <table className="srv-table srv-table-lg srv-budget-table">
+        <thead><tr><th></th>{MONTH_KEYS.map((k) => <th key={k} className={RENTAL_GROWTH_MONTHS.includes(k) ? 'is-growth' : ''}>{MONTH_LABELS[k]}</th>)}<th>計</th></tr></thead>
+        <tbody>
+          <BudgetMonthRow label="レンタル売上予算" values={data.rentalMonthly} growthMonths={RENTAL_GROWTH_MONTHS} />
+          <BudgetMonthRow label="住宅改修売上予算" values={data.kaishuuMonthly} />
+          <BudgetMonthRow label="商品販売売上予算" values={data.hanbaiMonthly} />
+          <BudgetMonthRow label="特価ベッド目標台数" values={data.tokkaBedMonthly} />
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
 function BudgetTableTab({ officeName, report, refresh }) {
-  const b = report.budget
-  function patchOffice(next) { updateOfficeReport(officeName, (r) => ({ ...r, budget: { ...r.budget, office: { ...r.budget.office, ...next } } })); refresh() }
+  // 旧形式（12ヶ月ぶんの配列）で保存されている担当者を編集したときに、変更しなかった項目が
+  // 未設定として0に落ちないよう、現在の値をすべて解決してから差分を重ねて保存する。
   function patchRepBudget(name, next) {
-    updateOfficeReport(officeName, (r) => ({ ...r, budget: { ...r.budget, reps: { ...r.budget.reps, [name]: { ...(r.budget.reps[name] || {}), ...next } } } }))
+    updateOfficeReport(officeName, (r) => {
+      const current = repBudgetOf(r, name)
+      const merged = {
+        rentalStart: current.rentalStart,
+        rentalGrowth: current.rentalGrowth,
+        kaishuu: current.kaishuu,
+        hanbai: current.hanbai,
+        tokkaBed: current.tokkaBed,
+        shouhinhinLastYearAvg: current.shouhinhinLastYearAvg,
+        shouhinhinTargetAvg: current.shouhinhinTargetAvg,
+        ...next,
+      }
+      return { ...r, budget: { ...r.budget, reps: { ...r.budget.reps, [name]: merged } } }
+    })
     refresh()
   }
-  function MonthlyRow({ label, values, onChange }) {
-    return (
-      <tr>
-        <th>{label}</th>
-        {values.map((v, i) => (
-          <td key={i}><NumberCell value={v} onChange={(val) => { const next = [...values]; next[i] = val; onChange(next) }} width={68} /></td>
-        ))}
-        <td className="srv-calc">{yen(values.reduce((s, v) => s + Number(v || 0), 0))}</td>
-      </tr>
-    )
-  }
-  function BudgetBlock({ title, data, onChange }) {
-    return (
-      <div className="srv-card">
-        <b>{title}</b>
-        <div className="srv-table-scroll">
-          <table className="srv-table srv-table-lg">
-            <thead><tr><th></th>{MONTH_KEYS.map((k) => <th key={k}>{MONTH_LABELS[k]}</th>)}<th>計</th></tr></thead>
-            <tbody>
-              <MonthlyRow label="レンタル売上予算" values={data.rentalMonthly} onChange={(v) => onChange({ rentalMonthly: v })} />
-              <MonthlyRow label="住宅改修売上予算" values={data.kaishuuMonthly} onChange={(v) => onChange({ kaishuuMonthly: v })} />
-              <MonthlyRow label="商品販売売上予算" values={data.hanbaiMonthly} onChange={(v) => onChange({ hanbaiMonthly: v })} />
-              <MonthlyRow label="特価ベッド目標台数" values={data.tokkaBedMonthly} onChange={(v) => onChange({ tokkaBedMonthly: v })} />
-            </tbody>
-          </table>
-        </div>
-        <div className="srv-field-grid" style={{ marginTop: 8 }}>
-          <label>前年度消耗品売上実績（月平均）<NumberCell value={data.shouhinhinLastYearAvg} onChange={(v) => onChange({ shouhinhinLastYearAvg: v })} width={100} /></label>
-          <label>本年度消耗品売上目標（月平均）<NumberCell value={data.shouhinhinTargetAvg} onChange={(v) => onChange({ shouhinhinTargetAvg: v })} width={100} /></label>
-        </div>
-      </div>
-    )
-  }
+
+  const office = officeBudgetOf(report)
+  const growthLabel = RENTAL_GROWTH_MONTHS.map((k) => MONTH_LABELS[k]).join('・')
+
   return (
     <div className="srv-panel">
       <div className="srv-month-title">売上予算表</div>
-      <BudgetBlock title={`営業所計（${officeName}）`} data={b.office} onChange={patchOffice} />
-      {report.repNames.map((name) => (
-        <BudgetBlock key={name} title={`担当：${name}`} data={b.reps[name] || { rentalMonthly: Array(12).fill(0), kaishuuMonthly: Array(12).fill(0), hanbaiMonthly: Array(12).fill(0), tokkaBedMonthly: Array(12).fill(0), shouhinhinLastYearAvg: 0, shouhinhinTargetAvg: 0 }} onChange={(next) => patchRepBudget(name, next)} />
-      ))}
+      <div className="srv-note">
+        ※ レンタルは担当者ごとに「4月のスタート値」と「純増額」を入力すると、伸ばす月（{growthLabel}）にだけ純増額を積み上げて各月の予算を自動計算します。
+        住宅改修・商品販売・特価ベッドは月額を1つ入力すると、年間を通して各月に反映します。各月の欄と営業所計は自動計算のため入力できません。
+      </div>
+
+      <div className="srv-card">
+        <b>営業所計（{officeName}）　※担当者の合計・自動計算</b>
+        <BudgetMonthTable data={office} />
+        <div className="srv-field-grid" style={{ marginTop: 8 }}>
+          <label>前年度消耗品売上実績（月平均）<span className="srv-readonly-value">{yen(office.shouhinhinLastYearAvg)}</span></label>
+          <label>本年度消耗品売上目標（月平均）<span className="srv-readonly-value">{yen(office.shouhinhinTargetAvg)}</span></label>
+        </div>
+      </div>
+
+      {report.repNames.map((name) => {
+        const rep = repBudgetOf(report, name)
+        return (
+          <div className="srv-card" key={name}>
+            <b>担当：{name}</b>
+            <div className="srv-group">
+              <div className="srv-group-title">入力するのはここだけ（千円・台）</div>
+              <div className="srv-big-grid">
+                <BigField label="レンタル 4月スタート値" value={rep.rentalStart} onChange={(v) => patchRepBudget(name, { rentalStart: v })} suffix="千円" />
+                <BigField label="レンタル 純増額（伸ばす月ごと）" value={rep.rentalGrowth} onChange={(v) => patchRepBudget(name, { rentalGrowth: v })} suffix="千円" />
+                <BigField label="住宅改修 売上予算（毎月）" value={rep.kaishuu} onChange={(v) => patchRepBudget(name, { kaishuu: v })} suffix="千円" />
+                <BigField label="商品販売 売上予算（毎月）" value={rep.hanbai} onChange={(v) => patchRepBudget(name, { hanbai: v })} suffix="千円" />
+                <BigField label="特価ベッド 目標台数（毎月）" value={rep.tokkaBed} onChange={(v) => patchRepBudget(name, { tokkaBed: v })} suffix="台" />
+              </div>
+              <div className="srv-inline-calc">
+                レンタル年間計 <b>{yen(rep.rentalMonthly.reduce((s, v) => s + v, 0))}千円</b>
+                ／3月時点 <b>{yen(rep.rentalMonthly[11])}千円</b>
+                （4月から <b>{yen(rep.rentalMonthly[11] - rep.rentalStart)}千円</b> 増）
+              </div>
+            </div>
+            <BudgetMonthTable data={rep} />
+            <div className="srv-field-grid" style={{ marginTop: 8 }}>
+              <label>前年度消耗品売上実績（月平均）<NumberCell value={rep.shouhinhinLastYearAvg} onChange={(v) => patchRepBudget(name, { shouhinhinLastYearAvg: v })} width={100} /></label>
+              <label>本年度消耗品売上目標（月平均）<NumberCell value={rep.shouhinhinTargetAvg} onChange={(v) => patchRepBudget(name, { shouhinhinTargetAvg: v })} width={100} /></label>
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -615,8 +667,10 @@ function AnnualProgressTab({ officeName, report, fiscalYear }) {
   }
 
   const rentalUpperJisseki = sumOver(upperMonths, (e) => e.sales.touGetsuKaishu)
-  const rentalUpperYosan = report.budget.office.rentalMonthly.slice(0, 6).reduce((s, v) => s + v, 0)
-  const rentalLowerYosan = report.budget.office.rentalMonthly.slice(6, 12).reduce((s, v) => s + v, 0)
+  // 営業所の予算は担当者の入力値から都度組み立てる（保存済みの配列ではなく常に最新の合計を使う）。
+  const officeRentalMonthly = officeBudgetOf(report).rentalMonthly
+  const rentalUpperYosan = officeRentalMonthly.slice(0, 6).reduce((s, v) => s + v, 0)
+  const rentalLowerYosan = officeRentalMonthly.slice(6, 12).reduce((s, v) => s + v, 0)
   const rentalLowerJisseki = sumOver(lowerMonths, (e) => e.sales.touGetsuKaishu)
 
   const kaigoUpper = sumOver(upperMonths, (e) => (e.kaigoRentalJisseki?.houkatsu || 0) + (e.kaigoRentalJisseki?.kyotaku || 0))

@@ -925,6 +925,11 @@ tr.is-divergent th { color: #a3355a; }
 .srv-rep-name { display: flex; align-items: center; gap: 6px; justify-content: space-between; }
 .srv-rep-remove { border: 0; background: none; color: #b0435a; font-weight: 900; cursor: pointer; font-size: 13px; padding: 0 3px; }
 .srv-calc { font-weight: 800; color: var(--teal-deep); background: #f7fbff; }
+/* 売上予算表：各月は入力値からの自動計算なので、入力欄ではなく数値表示にする。伸ばす月だけ色を変えて分かるようにする。 */
+.srv-budget-table td.srv-budget-month { text-align: right; padding-right: 10px; font-size: 15px; font-weight: 700; color: #33465a; background: #fbfdff; }
+.srv-budget-table td.srv-budget-month.is-growth { color: var(--teal-deep); background: #eef8f7; font-weight: 900; }
+.srv-budget-table thead th.is-growth { color: var(--teal-deep); background: #e2f3f1; }
+.srv-readonly-value { display: inline-block; min-width: 100px; padding: 6px 10px; border-radius: 7px; background: #f1f5f9; color: #33465a; font-size: 15px; font-weight: 800; text-align: right; }
 .srv-visit-total-col { border-right: 3px solid var(--teal) !important; }
 th.srv-visit-total-col { background: #eef7f6; color: var(--teal-deep); }
 .srv-total-row th, .srv-total-row td { background: #eef7f6; font-weight: 900; color: var(--navy); }
@@ -1105,10 +1110,10 @@ th.srv-visit-total-col { background: #eef7f6; color: var(--teal-deep); }
 .srv-sales-group-rental { background: #eef7f6; border: 1px solid #b8dfdd; }
 .srv-sales-group-other { background: #f4f0fb; border: 1px solid #d9cdf2; }
 
-.srv-threerow-cell { padding: 12px 14px; border-radius: 10px; background: #fff; border: 1px solid var(--line); display: flex; flex-direction: column; gap: 6px; }
-.srv-threerow-cell span { color: #445465; font-size: 13px; font-weight: 800; }
-.srv-threerow-cell strong { color: var(--teal-deep); font-size: 20px; font-weight: 900; }
-.srv-threerow-cell strong em { margin-left: 4px; color: #5c6f80; font-size: 12px; font-style: normal; font-weight: 800; }
+.srv-threerow-cell { padding: 18px 20px; border-radius: 10px; background: #fff; border: 1px solid var(--line); display: flex; flex-direction: column; gap: 6px; }
+.srv-threerow-cell span { color: #445465; font-size: 15px; font-weight: 800; }
+.srv-threerow-cell strong { color: var(--teal-deep); font-size: 26px; font-weight: 900; }
+.srv-threerow-cell strong em { margin-left: 5px; color: #5c6f80; font-size: 14px; font-style: normal; font-weight: 800; }
 .srv-threerow { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
 .srv-threerow-input-wrap { display: flex; align-items: baseline; gap: 6px; }
 .srv-threerow-input { width: 100%; height: 34px; padding: 0 8px; border: 1px solid var(--line-strong); border-radius: 7px;
@@ -1117,13 +1122,13 @@ th.srv-visit-total-col { background: #eef7f6; color: var(--teal-deep); }
 .srv-threerow-input-wrap em { color: #5c6f80; font-size: 12px; font-style: normal; font-weight: 800; }
 
 .srv-budget-row-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
-.srv-budget-cell { padding: 12px 14px; border-radius: 10px; background: #fff; border: 1px solid var(--line); display: flex; flex-direction: column; gap: 6px; }
+.srv-budget-cell { padding: 18px 20px; border-radius: 10px; background: #fff; border: 1px solid var(--line); display: flex; flex-direction: column; gap: 6px; }
 .srv-budget-line { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.srv-budget-line span { color: #445465; font-size: 13px; font-weight: 700; }
-.srv-budget-line b { color: var(--navy); font-size: 15px; font-weight: 800; }
-.srv-budget-line em { margin-left: 3px; font-style: normal; font-size: 11px; font-weight: 700; color: #5c6f80; }
+.srv-budget-line span { color: #445465; font-size: 15px; font-weight: 700; }
+.srv-budget-line b { color: var(--navy); font-size: 18px; font-weight: 800; }
+.srv-budget-line em { margin-left: 4px; font-style: normal; font-size: 13px; font-weight: 700; color: #5c6f80; }
 .srv-budget-actual { padding-bottom: 6px; border-bottom: 1px dashed var(--line-strong); }
-.srv-budget-actual b { color: var(--teal-deep); font-size: 17px; }
-.srv-budget-diff b { font-size: 15px; }
+.srv-budget-actual b { color: var(--teal-deep); font-size: 25px; }
+.srv-budget-diff b { font-size: 17px; }
 .srv-budget-diff.srv-plus b { color: #087f73; }
 .srv-budget-diff.srv-minus b { color: #b0435a; }

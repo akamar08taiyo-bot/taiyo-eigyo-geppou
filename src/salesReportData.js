@@ -186,6 +186,84 @@ const BUDGET_SEED = {
   },
 }
 
+/* ============================================================
+   売上予算の組み立てロジック
+   レンタルはストック（前月の残高に積み上がる）のため、担当者ごとに「4月のスタート値」と
+   「純増額」だけを決め、伸ばす月にだけ純増額を積み上げて各月の予算を作る。
+   伸ばさない月は前月の金額をそのまま引き継ぐ。
+   住宅改修・商品販売・特価ベッドは月額を1つ決め、年間を通して同じ金額を各月に置く（計は12ヶ月分の合計）。
+   営業所計は常に担当者の合計（手入力しない）。
+============================================================ */
+export const RENTAL_GROWTH_MONTHS = ['05', '06', '07', '10', '11', '12', '03']
+const GROWTH_MONTH_SET = new Set(RENTAL_GROWTH_MONTHS)
+
+// スタート値と純増額から、4月〜3月の12ヶ月分のレンタル予算を作る。
+export function buildRentalMonthly(start, growth) {
+  let steps = 0
+  return MONTH_KEYS.map((monthKey) => {
+    if (GROWTH_MONTH_SET.has(monthKey)) steps += 1
+    return Math.round((Number(start) || 0) + (Number(growth) || 0) * steps)
+  })
+}
+
+const flat12 = (value) => Array(12).fill(Math.round(Number(value) || 0))
+
+// 旧形式（12ヶ月ぶんの配列を直接持っていた頃）のデータからスタート値・純増額・月額を推定する。
+// 4月の値をスタート値、最初の伸ばす月（5月）との差を純増額とみなす。
+function budgetParamsOf(entry) {
+  const source = entry || {}
+  if (source.rentalStart != null || source.rentalGrowth != null) {
+    return {
+      rentalStart: Number(source.rentalStart) || 0,
+      rentalGrowth: Number(source.rentalGrowth) || 0,
+      kaishuu: Number(source.kaishuu) || 0,
+      hanbai: Number(source.hanbai) || 0,
+      tokkaBed: Number(source.tokkaBed) || 0,
+    }
+  }
+  const rental = source.rentalMonthly || []
+  return {
+    rentalStart: Number(rental[0]) || 0,
+    rentalGrowth: Math.max(0, (Number(rental[1]) || 0) - (Number(rental[0]) || 0)),
+    kaishuu: Number((source.kaishuuMonthly || [])[0]) || 0,
+    hanbai: Number((source.hanbaiMonthly || [])[0]) || 0,
+    tokkaBed: Number((source.tokkaBedMonthly || [])[0]) || 0,
+  }
+}
+
+// 担当者1人分の入力値（スタート値・純増額・月額）から、表示用の12ヶ月配列を作る。
+export function repBudgetOf(report, repName) {
+  const entry = report?.budget?.reps?.[repName]
+  const params = budgetParamsOf(entry)
+  return {
+    ...params,
+    rentalMonthly: buildRentalMonthly(params.rentalStart, params.rentalGrowth),
+    kaishuuMonthly: flat12(params.kaishuu),
+    hanbaiMonthly: flat12(params.hanbai),
+    tokkaBedMonthly: flat12(params.tokkaBed),
+    shouhinhinLastYearAvg: Number(entry?.shouhinhinLastYearAvg) || 0,
+    shouhinhinTargetAvg: Number(entry?.shouhinhinTargetAvg) || 0,
+  }
+}
+
+// 営業所計は担当者全員の合計。手入力は受け付けず、常に再計算する。
+export function officeBudgetOf(report) {
+  const names = report?.repNames || []
+  const zero = () => Array(12).fill(0)
+  const totals = { rentalMonthly: zero(), kaishuuMonthly: zero(), hanbaiMonthly: zero(), tokkaBedMonthly: zero() }
+  let lastYearAvg = 0
+  let targetAvg = 0
+  for (const name of names) {
+    const rep = repBudgetOf(report, name)
+    for (const key of Object.keys(totals)) {
+      for (let index = 0; index < 12; index += 1) totals[key][index] += rep[key][index]
+    }
+    lastYearAvg += rep.shouhinhinLastYearAvg
+    targetAvg += rep.shouhinhinTargetAvg
+  }
+  return { ...totals, shouhinhinLastYearAvg: lastYearAvg, shouhinhinTargetAvg: targetAvg, ninzu: names.length }
+}
+
 export const DEFAULT_FISCAL_YEAR = 2026
 const PREV_FISCAL_YEAR = 2025
 
