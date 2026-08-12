@@ -258,6 +258,12 @@ tr:hover .row-actions, .row-actions:focus-within { opacity: 1; }
 .kpi-card small { margin-left: 5px; color: #5c6f80; font-size: 13px; }
 .analysis-grid { margin-top: 13px; display: grid; grid-template-columns: 1.4fr 1fr; gap: 13px; }
 .chart-panel, .staff-panel { padding: 17px; border: 1px solid var(--line); border-radius: 11px; background: #fff; box-shadow: 0 5px 16px rgba(18,49,80,.04); }
+/* グリッド/フレックスの子は既定で min-width:auto のため、中の表の幅にパネルが引き伸ばされ、
+   表側の overflow-x:auto が効かずページ全体が横スクロールしてしまう。子側の縮小を許可して、
+   はみ出す表は必ず表の枠内だけでスクロールさせる。 */
+.chart-panel, .staff-panel { min-width: 0; }
+.analysis-grid > *, .analysis-detail-grid > *, .kpi-grid > *, .sales-insight-grid > *, .srv-grid-2 > *, .srv-grid-3 > * { min-width: 0; }
+.responsive-table { max-width: 100%; }
 .panel-heading { display: flex; justify-content: space-between; gap: 12px; }
 .panel-heading h2 { margin: 0; color: var(--navy); font-size: 15px; }
 .panel-heading span { display: block; margin-top: 4px; color: #536573; font-size: 13px; }
@@ -941,8 +947,10 @@ th.srv-visit-total-col { background: #eef7f6; color: var(--teal-deep); }
 .srv-add-rep button { height: 32px; padding: 0 10px; border: 0; border-radius: 7px; background: var(--teal); color: #fff; font-size: 13px; font-weight: 800; cursor: pointer; }
 .srv-rep-details { border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; }
 .srv-rep-details summary { cursor: pointer; font-weight: 800; color: var(--navy); font-size: 12px; }
-.srv-field-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 8px; }
-.srv-field-grid label { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 14px; font-weight: 700; color: #52667a; }
+.srv-field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 8px; }
+.srv-field-grid label { min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 14px; font-weight: 700; color: #52667a; }
+/* 入力欄が固定幅で画面からはみ出さないよう、狭い画面では枠内に収める */
+.srv-field-grid input, .srv-field-grid .srv-text-input { min-width: 0; max-width: 100%; }
 .srv-office-summary { margin-top: 6px; padding: 10px; border-radius: 9px; background: #f7fbff; border: 1px solid var(--line); }
 .srv-office-summary-title { font-size: 13px; font-weight: 900; color: var(--teal-deep); margin-bottom: 6px; }
 .srv-kv-grid { display: grid; grid-template-columns: auto auto; gap: 5px 14px; font-size: 12px; }
@@ -1078,7 +1086,8 @@ th.srv-visit-total-col { background: #eef7f6; color: var(--teal-deep); }
 .srv-import-hintbar { margin: 10px 0; padding: 9px 12px; border-radius: 9px; display: flex; align-items: flex-start; gap: 7px; color: #4c6479; background: #f1f7f8; font-size: 12.5px; line-height: 1.6; }
 .srv-import-hintbar .icon { flex: none; margin-top: 1px; color: var(--teal); }
 /* タイトル横に置くExcel取込ボタン。見つけやすいよう縦幅を大きめに取り、タイトルブロックと縦中央で揃える。 */
-.page-header-import-btn { align-self: center; min-height: 64px; padding: 0 28px; gap: 10px; border-radius: 12px; font-size: 16px; font-weight: 900; }
+.page-header-import-btn { align-self: center; flex-shrink: 0; min-height: 68px; padding: 0 26px; gap: 10px; border-radius: 12px; font-size: 15px; font-weight: 900; line-height: 1.35; text-align: center; box-shadow: 0 6px 16px rgba(7, 139, 142, .28); }
+.page-header-import-btn:hover:not(:disabled) { box-shadow: 0 8px 18px rgba(7, 139, 142, .34); }
 .page-header-import-btn .icon { width: 22px; height: 22px; }
 
 /* ---------- Excel取込カード ---------- */
