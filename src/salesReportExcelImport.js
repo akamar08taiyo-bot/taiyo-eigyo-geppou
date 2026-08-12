@@ -186,8 +186,21 @@ function parseRepPerformanceFromWorkbook(workbook) {
       if (monthCols[mn].ruikeiYosan == null) { monthCols[mn].ruikeiYosan = col; monthCols[mn].ruikeiJisseki = col + 1 }
     }
   }
-  const months = Object.entries(monthCols).filter(([, c]) => c.tankiYosan != null && c.ruikeiYosan != null)
-  if (!months.length) throw new Error('このファイルから月別データの列が見つかりませんでした。')
+  const allMonths = Object.entries(monthCols).filter(([, c]) => c.tankiYosan != null && c.ruikeiYosan != null)
+  if (!allMonths.length) throw new Error('このファイルから月別データの列が見つかりませんでした。')
+
+  // このファイルは常に4月〜3月の12ヶ月分の列を持つが、まだ到来していない月は単月（予算・実績）が空のまま、
+  // 累計列だけに直前月の値がそのまま繰り越されて入っている。その状態で取り込むと、例えば6月版のファイルから
+  // 7月以降にも「単月0・累計は6月の値」という実態のない数字が書き込まれてしまう。
+  // そこでシート全体を先に走査し、単月に実績・予算のどちらかが入っている月だけを取込対象とする。
+  const monthsWithData = allMonths.filter(([, c]) => {
+    for (let r = 5; r <= sheet.rowCount; r++) {
+      const row = sheet.getRow(r)
+      if (cellNumber(row, c.tankiYosan) !== 0 || cellNumber(row, c.tankiJisseki) !== 0) return true
+    }
+    return false
+  })
+  const months = monthsWithData.length ? monthsWithData : allMonths
 
   // 各営業所ブロックの末尾には「予備」担当（空枠）や「営業所合計」「営業部合計」「本社売上」「総合計」といった
   // 小計・全社集計の行が、担当者行と同じ列構成で続く。実在の担当者行ではないため除外する。

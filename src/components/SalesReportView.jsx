@@ -405,14 +405,14 @@ function RepEditView({ repName, entry, onChange, goals, monthKeyOfEntry, fiscalY
         </div>
       </div>
 
-      <div className="srv-grid-2">
+      <div className="srv-comment-stack">
         <div className="srv-card">
           <b>●総括</b>
-          <textarea className="srv-big-textarea" rows={6} value={entry.soukatsu} onChange={(e) => onChange({ soukatsu: e.target.value })} placeholder="今月の総括を入力してください" />
+          <textarea className="srv-big-textarea" rows={8} value={entry.soukatsu} onChange={(e) => onChange({ soukatsu: e.target.value })} placeholder="今月の総括を入力してください" />
         </div>
         <div className="srv-card">
           <b>●次月対策</b>
-          <textarea className="srv-big-textarea" rows={6} value={entry.jigetsuTaisaku} onChange={(e) => onChange({ jigetsuTaisaku: e.target.value })} placeholder="次月の対策を入力してください" />
+          <textarea className="srv-big-textarea" rows={8} value={entry.jigetsuTaisaku} onChange={(e) => onChange({ jigetsuTaisaku: e.target.value })} placeholder="次月の対策を入力してください" />
         </div>
       </div>
       </div>
