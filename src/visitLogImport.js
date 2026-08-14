@@ -5,6 +5,8 @@
 //   ②旧形式バイナリExcel（OLEヘッダを持たないBIFF形式。SheetJS + codepage:932で読む）
 // どちらも列見出しは「連番号,部門コード,部門名,...,担当名,...,実施内容,...,開始日,...」で共通。
 
+import { formatDateString, isValidDateString } from './lib/businessDate.js'
+
 const HEADER_LABELS = { office: '部門名', rep: '担当名', content: '実施内容', date: '開始日' }
 
 function splitDelimitedLine(line, delimiter) {
@@ -110,11 +112,18 @@ const CONTENT_MAP = {
 const VISIT_KEYS = ['houkatsu', 'kyotaku', 'shisetsu', 'kojin', 'yakusho', 'rentalSoudan', 'rentalKaigo', 'rentalJihi', 'rentalKaishu', 'rentalKoukan', 'hanbaiSoudan', 'hanbaiNouhin', 'kaishuSoudan', 'kaishuGenba', 'kaishuKouji', 'keikakusho', 'monitoring', 'tantousha', 'claim', 'shukin', 'doukou', 'sonota', 'kadou']
 function emptyVisit() { const v = {}; for (const k of VISIT_KEYS) v[k] = 0; return v }
 
+// 訪問ログの日付を解釈する。
+// new Date(2026, 1, 31) は 3月3日へ繰り上がってしまうため、生成した Date の
+// 年月日が入力と一致するか（往復一致するか）を確認し、存在しない日付は
+// null を返して取り込まない。2026-02-31 や 4月31日、非うるう年の2月29日を弾く。
 function parseDate(s) {
   const m = String(s).match(/^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})/) || String(s).match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})$/)
   if (!m) return null
-  if (m[1].length === 4) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
-  return new Date(2000 + Number(m[3]), Number(m[1]) - 1, Number(m[2]))
+  const [year, month, day] = m[1].length === 4
+    ? [Number(m[1]), Number(m[2]), Number(m[3])]
+    : [2000 + Number(m[3]), Number(m[1]), Number(m[2])]
+  if (!isValidDateString(formatDateString(year, month, day))) return null
+  return new Date(year, month - 1, day)
 }
 function monthKeyOf(dt) { return String(dt.getMonth() + 1).padStart(2, '0') }
 function fiscalYearOf(dt) { const m = dt.getMonth() + 1; return m >= 4 ? dt.getFullYear() : dt.getFullYear() - 1 }
@@ -132,7 +141,9 @@ export async function parseVisitLogWorkbook(file) {
     const officeName = /営業所$/.test(rec.office) ? rec.office : `${rec.office}営業所`
     const fiscalYear = fiscalYearOf(dt)
     const monthKey = monthKeyOf(dt)
-    const dayKey = dt.toISOString().slice(0, 10)
+    // dt はローカル時刻の0時なので toISOString() では日本時間で1日前になる。
+    // 稼働日数のキーは暦日そのものなので、年月日から直接組み立てる。
+    const dayKey = formatDateString(dt.getFullYear(), dt.getMonth() + 1, dt.getDate())
 
     if (!result[officeName]) result[officeName] = {}
     if (!result[officeName][rec.rep]) result[officeName][rec.rep] = {}

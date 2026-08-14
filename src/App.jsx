@@ -11,8 +11,10 @@ import { parseProviderSalesWorkbook } from './providerSalesExcelImport'
 import { parseVisitLogWorkbook } from './visitLogImport'
 import { applyImportedProviderSales } from './providerSalesData'
 import { applyImportedSalesFigures, applyImportedSalesFiguresMultiMonth, applyImportedHanbaiFigures, applyImportedVisitFigures, pickOfficeData, DEFAULT_FISCAL_YEAR, MONTH_LABELS } from './salesReportData'
+import { currentBusinessMonth } from './lib/businessDate.js'
 
-const currentMonth = () => new Date().toISOString().slice(0, 7)
+// 業務月は日本時間で判定する（UTC基準だと月初のJST深夜0〜9時に前月が初期選択される）
+const currentMonth = () => currentBusinessMonth()
 const fiscalFor = (month) => { const [year, number] = month.split('-').map(Number); return number >= 4 ? year : year - 1 }
 const roleLabel = { staff: '営業員', office_admin: '営業所利用', system_admin: '営業所利用' }
 
