@@ -11,19 +11,20 @@ import {
   RENTAL_GROWTH_MONTHS, repBudgetOf, officeBudgetOf,
 } from '../salesReportData'
 import { downloadElementPdf } from '../pdf-export'
+import { NumberField } from './NumberField'
 
 const yen = (n) => `${Math.round(Number(n) || 0).toLocaleString('ja-JP')}`
 const num = (n) => `${Math.round(Number(n) || 0).toLocaleString('ja-JP')}`
 const pct = (a, b) => (b ? `${Math.round((a / b) * 100)}%` : '—')
 
-function NumberCell({ value, onChange, width = 64 }) {
+function NumberCell({ value, onChange, width = 64, ariaLabel }) {
   return (
-    <input
-      type="number"
-      value={value === 0 ? 0 : value || ''}
-      onChange={(e) => onChange(Number(e.target.value) || 0)}
+    <NumberField
+      value={value}
+      onCommit={onChange}
       className="srv-num-input"
       style={{ width }}
+      ariaLabel={ariaLabel}
     />
   )
 }
@@ -44,12 +45,7 @@ function BigField({ label, value, onChange, suffix }) {
     <label className="srv-big-field">
       <span className="srv-big-label">{label}</span>
       <span className="srv-big-input-wrap">
-        <input
-          type="number"
-          value={value === 0 ? 0 : value || ''}
-          onChange={(e) => onChange(Number(e.target.value) || 0)}
-          className="srv-big-input"
-        />
+        <NumberField value={value} onCommit={onChange} className="srv-big-input" ariaLabel={label} />
         {suffix && <em className="srv-big-suffix">{suffix}</em>}
       </span>
     </label>
@@ -75,7 +71,7 @@ function ThreerowCell({ label, value, onChange, editable }) {
       <span>{label}</span>
       {editable ? (
         <span className="srv-threerow-input-wrap">
-          <input type="number" className="srv-threerow-input" value={value === 0 ? 0 : value || ''} onChange={(e) => onChange(Number(e.target.value) || 0)} />
+          <NumberField value={value} onCommit={onChange} className="srv-threerow-input" ariaLabel={label} />
           <em>千円</em>
         </span>
       ) : (
@@ -144,13 +140,13 @@ function VisitTable({ visit, onChange }) {
         </thead>
         <tbody>
           <tr>
-            {VISIT_GROUPS.flatMap(([, fields]) => fields.map(([k]) => (
+            {VISIT_GROUPS.flatMap(([groupName, fields]) => fields.map(([k, fieldLabel]) => (
               <td key={k}>
-                <input
-                  type="number"
+                <NumberField
+                  value={visit[k]}
+                  onCommit={(next) => onChange(k, next)}
                   className="srv-visit-input"
-                  value={visit[k] === 0 ? 0 : visit[k] || ''}
-                  onChange={(e) => onChange(k, Number(e.target.value) || 0)}
+                  ariaLabel={`${groupName} ${fieldLabel}`}
                 />
               </td>
             )))}
@@ -331,10 +327,10 @@ function RepEditView({ repName, entry, onChange, goals, monthKeyOfEntry, fiscalY
                 return (
                   <tr key={item}>
                     <td>{item}</td>
-                    <td><input type="number" className="srv-big-input" value={h.yosanKensu === 0 ? 0 : h.yosanKensu || ''} onChange={(e) => setHanbai(item, 'yosanKensu', Number(e.target.value) || 0)} /></td>
-                    <td><input type="number" className="srv-big-input" value={h.yosanUriage === 0 ? 0 : h.yosanUriage || ''} onChange={(e) => setHanbai(item, 'yosanUriage', Number(e.target.value) || 0)} /></td>
-                    <td><input type="number" className="srv-big-input" value={h.jissekiKensu === 0 ? 0 : h.jissekiKensu || ''} onChange={(e) => setHanbai(item, 'jissekiKensu', Number(e.target.value) || 0)} /></td>
-                    <td><input type="number" className="srv-big-input" value={h.jissekiUriage === 0 ? 0 : h.jissekiUriage || ''} onChange={(e) => setHanbai(item, 'jissekiUriage', Number(e.target.value) || 0)} /></td>
+                    <td><NumberField value={h.yosanKensu} onCommit={(v) => setHanbai(item, 'yosanKensu', v)} className="srv-big-input" ariaLabel={`${item} 予算 件数`} /></td>
+                    <td><NumberField value={h.yosanUriage} onCommit={(v) => setHanbai(item, 'yosanUriage', v)} className="srv-big-input" ariaLabel={`${item} 予算 売上`} /></td>
+                    <td><NumberField value={h.jissekiKensu} onCommit={(v) => setHanbai(item, 'jissekiKensu', v)} className="srv-big-input" ariaLabel={`${item} 実績 件数`} /></td>
+                    <td><NumberField value={h.jissekiUriage} onCommit={(v) => setHanbai(item, 'jissekiUriage', v)} className="srv-big-input" ariaLabel={`${item} 実績 売上`} /></td>
                     <td className={diff >= 0 ? 'srv-plus' : 'srv-minus'}>{yen(diff)}</td>
                   </tr>
                 )
@@ -361,10 +357,10 @@ function RepEditView({ repName, entry, onChange, goals, monthKeyOfEntry, fiscalY
               {Object.entries(targets).map(([name, t]) => (
                 <tr key={name}>
                   <td>{name}</td>
-                  <td><input type="number" className="srv-big-input" value={t.lastMar.count === 0 ? 0 : t.lastMar.count || ''} onChange={(e) => onChange({ targets: { ...targets, [name]: { ...t, lastMar: { ...t.lastMar, count: Number(e.target.value) || 0 } } } })} /></td>
-                  <td><input type="number" className="srv-big-input" value={t.lastMar.sales === 0 ? 0 : t.lastMar.sales || ''} onChange={(e) => onChange({ targets: { ...targets, [name]: { ...t, lastMar: { ...t.lastMar, sales: Number(e.target.value) || 0 } } } })} /></td>
-                  <td><input type="number" className="srv-big-input" value={t.thisMonth.count === 0 ? 0 : t.thisMonth.count || ''} onChange={(e) => onChange({ targets: { ...targets, [name]: { ...t, thisMonth: { ...t.thisMonth, count: Number(e.target.value) || 0 } } } })} /></td>
-                  <td><input type="number" className="srv-big-input" value={t.thisMonth.sales === 0 ? 0 : t.thisMonth.sales || ''} onChange={(e) => onChange({ targets: { ...targets, [name]: { ...t, thisMonth: { ...t.thisMonth, sales: Number(e.target.value) || 0 } } } })} /></td>
+                  <td><NumberField value={t.lastMar.count} onCommit={(v) => onChange({ targets: { ...targets, [name]: { ...t, lastMar: { ...t.lastMar, count: v } } } })} className="srv-big-input" ariaLabel={`${name} 昨年度3月末 契約数`} /></td>
+                  <td><NumberField value={t.lastMar.sales} onCommit={(v) => onChange({ targets: { ...targets, [name]: { ...t, lastMar: { ...t.lastMar, sales: v } } } })} className="srv-big-input" ariaLabel={`${name} 昨年度3月末 売上`} /></td>
+                  <td><NumberField value={t.thisMonth.count} onCommit={(v) => onChange({ targets: { ...targets, [name]: { ...t, thisMonth: { ...t.thisMonth, count: v } } } })} className="srv-big-input" ariaLabel={`${name} 今月末 契約数`} /></td>
+                  <td><NumberField value={t.thisMonth.sales} onCommit={(v) => onChange({ targets: { ...targets, [name]: { ...t, thisMonth: { ...t.thisMonth, sales: v } } } })} className="srv-big-input" ariaLabel={`${name} 今月末 売上`} /></td>
                   <td className={t.thisMonth.count - t.lastMar.count >= 0 ? 'srv-plus' : 'srv-minus'}>{t.thisMonth.count - t.lastMar.count >= 0 ? '+' : ''}{num(t.thisMonth.count - t.lastMar.count)}</td>
                   <td><button className="srv-rep-remove" onClick={() => { const n = { ...targets }; delete n[name]; onChange({ targets: n }) }}>×</button></td>
                 </tr>
