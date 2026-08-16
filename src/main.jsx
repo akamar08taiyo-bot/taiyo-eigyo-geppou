@@ -2,6 +2,8 @@ import React from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
 import './styles.css'
+// 情報密度の調整と個人月報の1ページ印刷。styles.css の後に読み込んで上書きする。
+import './styles.compact.css'
 
 // デプロイのたびにJSファイル名が変わるため、古いページを開いたままの端末で
 // 新しく追加した機能（Excel解析など）を動的読み込みしようとすると失敗することがある。

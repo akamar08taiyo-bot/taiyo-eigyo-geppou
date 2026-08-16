@@ -277,7 +277,8 @@ function RepEditView({ repName, entry, onChange, goals, monthKeyOfEntry, fiscalY
     <div className="srv-panel">
       <SalesSummaryBlock sales={sales} monthLabel={MONTH_LABELS[monthKeyOfEntry]} fiscalYear={fiscalYearOfEntry} editable onChangeSales={setSales} />
 
-      <div className="srv-card">
+      {/* 23列あるので印刷時は段組みせず全幅で出す（srv-visit-card を目印にする） */}
+      <div className="srv-card srv-visit-card">
         <b>訪問実績</b>
         <VisitTable visit={visit} onChange={setVisit} />
       </div>

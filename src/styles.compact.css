@@ -1,0 +1,107 @@
+/* ============================================================
+   営業月報の情報密度を上げる調整と、個人月報のA4横1ページ印刷。
+
+   styles.css とは別ファイルにしている理由:
+   - 元のスタイルを書き換えず、上書きだけで完結させる（差し戻しが容易）
+   - 読み込み順は main.jsx で styles.css の後にする
+
+   方針: 文字を小さくして詰め込むのではなく、余白・行間・入力欄の高さを
+   削って詰める。読めなくなる縮小は行わない。
+============================================================ */
+
+/* 画面（非印刷）の情報密度の調整は、styles.css の既存値を読んだうえで
+   別途行う。推測値で上書きすると、元より大きい値を置いてしまい
+   かえって間延びするため、このファイルでは扱わない。
+
+   ---------- 個人月報の印刷を詰める ---------- */
+@media print {
+  /* 従来は販売内訳以降が必ず改ページされ、個人月報が2ページになっていた。
+     1ページに収めるため強制改ページを解除する。 */
+  body.srv-printing .srv-print-onepage {
+    page-break-before: auto !important;
+    break-before: auto !important;
+    display: block !important;
+  }
+
+  /* ページ全体の余白・間隔を最小化する */
+  body.srv-printing .srv-panel { gap: 4px !important; }
+  /* カードが改ページで分断されないようにする */
+  body.srv-printing .srv-print-onepage > * {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+  body.srv-printing .srv-card { padding: 5px 7px !important; gap: 4px !important; margin: 0 !important; }
+  body.srv-printing .srv-card > b { font-size: 10px !important; }
+
+  /* 集計カード：印刷では数字を控えめにして高さを稼ぐ */
+  body.srv-printing .srv-stat-row { gap: 4px !important; }
+  body.srv-printing .srv-stat { padding: 4px 6px !important; border-radius: 5px !important; box-shadow: none !important; }
+  body.srv-printing .srv-stat > span { font-size: 9px !important; }
+  body.srv-printing .srv-stat > strong { padding-top: 1px !important; font-size: 15px !important; }
+  body.srv-printing .srv-stat > strong em { font-size: 9px !important; }
+
+  body.srv-printing .srv-budget-cell { padding: 4px 6px !important; gap: 1px !important; }
+  body.srv-printing .srv-budget-line { font-size: 9px !important; }
+
+  /* 表：行間を詰める。本文は9px（約6.8pt）を下限にする */
+  body.srv-printing .srv-mini-table { font-size: 9px !important; }
+  body.srv-printing .srv-mini-table th,
+  body.srv-printing .srv-mini-table td { padding: 1px 3px !important; }
+  body.srv-printing .srv-input-table input { height: 14px !important; font-size: 9px !important; }
+
+  /* 目標・実績 */
+  body.srv-printing .srv-goal-block { padding-top: 4px !important; margin-top: 4px !important; }
+  body.srv-printing .srv-goal-total { padding: 2px 5px !important; font-size: 9px !important; }
+  body.srv-printing .srv-big-grid { gap: 4px !important; }
+
+  /* 自由記述（総括・次月対策）：入力枠ではなく本文として扱う */
+  body.srv-printing .srv-print-onepage textarea,
+  body.srv-printing .srv-big-textarea {
+    height: 40px !important; min-height: 0 !important;
+    font-size: 9px !important; line-height: 1.3 !important;
+    padding: 2px 4px !important; overflow: hidden !important;
+  }
+
+  body.srv-printing .srv-note { display: none !important; }
+  body.srv-printing .srv-import-hintbar { display: none !important; }
+
+  /* 集計ブロック：3段カードと5列カードが縦に積まれて最も嵩む */
+  body.srv-printing .srv-sales-summary { gap: 4px !important; }
+  body.srv-printing .srv-sales-group { padding: 4px !important; gap: 4px !important; }
+  body.srv-printing .srv-budget-row-3,
+  body.srv-printing .srv-threerow { gap: 4px !important; }
+  body.srv-printing .srv-threerow-cell { padding: 3px 5px !important; gap: 1px !important; font-size: 9px !important; }
+  body.srv-printing .srv-threerow-input { height: 14px !important; font-size: 9px !important; }
+  body.srv-printing .srv-threerow-cell span,
+  body.srv-printing .srv-threerow-cell em { font-size: 8.5px !important; }
+  body.srv-printing .srv-threerow-cell strong { font-size: 11px !important; }
+
+  /* 目標・実績：見出し＋入力＋合計行の3段が3ブロック分ある */
+  body.srv-printing .srv-group-title { font-size: 9.5px !important; margin-bottom: 2px !important; }
+  body.srv-printing .srv-big-field { gap: 1px !important; }
+  body.srv-printing .srv-big-label { font-size: 8.5px !important; }
+  body.srv-printing .srv-big-input { height: 16px !important; font-size: 9.5px !important; }
+  body.srv-printing .srv-big-suffix { font-size: 8.5px !important; }
+  body.srv-printing .srv-inline-calc { padding: 2px 5px !important; font-size: 9px !important; }
+
+  /* 表の入力欄 */
+  body.srv-printing .srv-num-input,
+  body.srv-printing .srv-text-input { height: 14px !important; font-size: 9px !important; padding: 0 2px !important; }
+
+  /* styles.css の .srv-print-onepage 配下ルールは詳細度が高いため、
+     同じ詳細度で上書きし直す（販売内訳・ターゲット先・目標実績が縮まない原因） */
+  body.srv-printing .srv-print-onepage .srv-card { padding: 5px 7px !important; gap: 3px !important; }
+  body.srv-printing .srv-print-onepage .srv-mini-table,
+  body.srv-printing .srv-print-onepage .srv-big-grid { font-size: 9px !important; }
+  body.srv-printing .srv-print-onepage .srv-mini-table th,
+  body.srv-printing .srv-print-onepage .srv-mini-table td { padding: 1px 3px !important; line-height: 1.2 !important; }
+  body.srv-printing .srv-print-onepage .srv-big-field { gap: 1px !important; }
+  body.srv-printing .srv-print-onepage .srv-big-label { font-size: 8.5px !important; }
+  body.srv-printing .srv-print-onepage .srv-big-input { height: 15px !important; font-size: 9px !important; padding: 0 3px !important; }
+  body.srv-printing .srv-print-onepage .srv-group { padding-top: 3px !important; margin-top: 3px !important; }
+  body.srv-printing .srv-print-onepage .srv-group-title { font-size: 9.5px !important; margin-bottom: 2px !important; }
+  body.srv-printing .srv-print-onepage .srv-big-textarea { font-size: 9px !important; }
+  body.srv-printing .srv-print-onepage textarea { height: 40px !important; }
+  body.srv-printing .srv-print-onepage .srv-inline-calc { padding: 2px 5px !important; font-size: 9px !important; }
+  body.srv-printing .srv-print-onepage .srv-table-scroll { overflow: visible !important; }
+}
