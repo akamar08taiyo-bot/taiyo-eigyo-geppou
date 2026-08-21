@@ -311,16 +311,48 @@ function defaultOfficeSeed() {
   }
 }
 
+// 保存・読み込みの失敗をReact側（App.jsx）へ伝えるための簡易購読機構。
+// このファイルはデータ層でReactに依存しないため、イベント通知だけを提供し、
+// 実際のトースト表示は購読側（App.jsx）が行う。
+const saveIssueListeners = new Set()
+export function onSaveIssue(listener) {
+  saveIssueListeners.add(listener)
+  return () => saveIssueListeners.delete(listener)
+}
+function reportSaveIssue(message) {
+  for (const listener of saveIssueListeners) {
+    try { listener(message) } catch { /* 通知先のエラーはデータ層に波及させない */ }
+  }
+}
+
 function load() {
+  let raw
   try {
-    const raw = localStorage.getItem(STORE_KEY)
+    raw = localStorage.getItem(STORE_KEY)
     const data = raw ? JSON.parse(raw) : {}
     data.offices = data.offices || {}
     return data
-  } catch { return { offices: {} } }
+  } catch {
+    // 破損データを黙って消さず、別キーへ退避してから空の状態を返す
+    try {
+      if (raw) localStorage.setItem(`${STORE_KEY}_corrupted_${Date.now()}`, raw)
+    } catch { /* 退避に失敗しても読み込み自体は継続する */ }
+    reportSaveIssue('保存データの読み込みに失敗したため、この端末を初期状態から開始します。破損したデータはこの端末に残していますので、復旧が必要な場合はご連絡ください。')
+    return { offices: {} }
+  }
 }
 
-function save(data) { localStorage.setItem(STORE_KEY, JSON.stringify(data)) }
+// 成功時はtrue、失敗時はfalseを返す。呼び出し側はこれを見て「保存できた」と
+// 誤表示しないこと（COMMON-06）。失敗はここで一元的にトースト通知する。
+function save(data) {
+  try {
+    localStorage.setItem(STORE_KEY, JSON.stringify(data))
+    return true
+  } catch {
+    reportSaveIssue('保存に失敗しました。この操作の内容は保存されていません。端末の空き容量、またはプライベート/シークレットモードでないことをご確認ください。')
+    return false
+  }
+}
 
 // 旧バージョン（年度の概念がなく report.months が単一年度分だった頃）のデータを、
 // monthsByYear[DEFAULT_FISCAL_YEAR] へ移行する。

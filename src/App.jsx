@@ -10,7 +10,7 @@ import { parseSalesWorkbookAuto } from './salesReportExcelImport'
 import { parseProviderSalesWorkbook } from './providerSalesExcelImport'
 import { parseVisitLogWorkbook } from './visitLogImport'
 import { applyImportedProviderSales } from './providerSalesData'
-import { applyImportedSalesFigures, applyImportedSalesFiguresMultiMonth, applyImportedHanbaiFigures, applyImportedVisitFigures, pickOfficeData, DEFAULT_FISCAL_YEAR, MONTH_LABELS } from './salesReportData'
+import { applyImportedSalesFigures, applyImportedSalesFiguresMultiMonth, applyImportedHanbaiFigures, applyImportedVisitFigures, pickOfficeData, DEFAULT_FISCAL_YEAR, MONTH_LABELS, onSaveIssue } from './salesReportData'
 import { currentBusinessMonth } from './lib/businessDate.js'
 
 // 業務月は日本時間で判定する（UTC基準だと月初のJST深夜0〜9時に前月が初期選択される）
@@ -43,10 +43,14 @@ export default function App() {
   const [importBusy, setImportBusy] = useState(false)
   const [importVersion, setImportVersion] = useState(0)
 
-  function notify(message, type = 'success') {
+  function notify(message, type = 'success', duration = 4800) {
     setToast({ message, type })
-    window.setTimeout(() => setToast(null), 4800)
+    window.setTimeout(() => setToast(null), duration)
   }
+
+  // 保存・読み込みの失敗（COMMON-06）。データ層(salesReportData.js)からの通知を
+  // トーストへ橋渡しする。保存失敗は誤って見逃されないよう長めに表示する。
+  useEffect(() => onSaveIssue((message) => notify(message, 'error', 12000)), [])
 
   useEffect(() => {
     setBooting(true)
@@ -188,6 +192,6 @@ export default function App() {
       </header>
       <div className="page-content">{pageContent}</div>
     </main>
-    {toast && <div className={`toast ${toast.type}`} role="status"><Icon name={toast.type === 'error' ? 'info' : 'check'}/>{toast.message}</div>}
+    {toast && <div className={`toast ${toast.type}`} role={toast.type === 'error' ? 'alert' : 'status'}><Icon name={toast.type === 'error' ? 'info' : 'check'}/>{toast.message}</div>}
   </div>
 }
