@@ -188,6 +188,7 @@ export default function App() {
         <div className="mobile-brand"><span className="brand-symbol">営</span>営業月報</div>
         <div className="office-context"><span>営業所</span><strong>{session.office.name}</strong></div>
         <div className="topbar-spacer"/>
+        <a href="https://akamar08taiyo-bot.github.io/taiyo-portal/" style={{fontSize:'11px',color:'#94a3b8',textDecoration:'none',marginRight:'12px'}}>← 業務アプリポータルへ戻る</a>
         <div className="user-context"><Icon name="user"/><div><strong>{session.user.name}</strong><span>{roleLabel[session.user.role]}</span></div></div>
       </header>
       <div className="page-content">{pageContent}</div>
