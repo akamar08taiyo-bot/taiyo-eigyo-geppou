@@ -54,7 +54,7 @@ export async function downloadCalendarPdf({ month, officeName, staffName }) {
 }
 
 // 任意のDOM要素をA4縦のPDFに変換する（縦に長い内容は自動で複数ページに分割する）。
-export async function downloadElementPdf({ selector, fileName }) {
+export async function downloadElementPdf({ selector, fileName, orientation = 'portrait' }) {
   const source = document.querySelector(selector)
   if (!source) throw new Error('PDFにする内容が見つかりませんでした。')
 
@@ -62,7 +62,7 @@ export async function downloadElementPdf({ selector, fileName }) {
   if (document.fonts?.ready) await document.fonts.ready
 
   const canvas = await html2canvas(source, { backgroundColor: '#ffffff', logging: false, scale: 2, useCORS: true })
-  const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true })
+  const pdf = new jsPDF({ orientation, unit: 'mm', format: 'a4', compress: true })
   const pageWidth = pdf.internal.pageSize.getWidth()
   const pageHeight = pdf.internal.pageSize.getHeight()
   const margin = 8
@@ -82,7 +82,7 @@ export async function downloadElementPdf({ selector, fileName }) {
     ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height)
     ctx.drawImage(canvas, 0, index * pageHeightPx, canvas.width, sliceHeightPx, 0, 0, canvas.width, sliceHeightPx)
     const imageHeightMm = sliceHeightPx * ratio
-    if (index > 0) pdf.addPage('a4', 'portrait')
+    if (index > 0) pdf.addPage('a4', orientation)
     pdf.addImage(sliceCanvas.toDataURL('image/jpeg', 0.94), 'JPEG', margin, margin, usableWidth, imageHeightMm, undefined, 'FAST')
   }
 

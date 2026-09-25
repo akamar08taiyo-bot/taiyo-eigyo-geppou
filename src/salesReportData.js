@@ -466,8 +466,13 @@ export function pickOfficeData(officeDataMap, officeName) {
 // 担当者名を既存のrepNamesと照合する。完全一致→前方一致（姓のみのデータに対応）の順で探し、
 // 見つからなければrepNamesに追加した上で新しい名前を返す。repNamesはこの関数の中でのみ変更する
 // （呼び出し側は返り値のrepNamesを使うこと）。
+// 取込側は氏名の空白を取り除いた形（例：山田太郎）で渡してくるが、画面から手で追加した担当者は
+// 「山田 太郎」のように空白を含むことがある。空白の有無で別人扱いになり、同じ人が2行に分かれて
+// 数字が分散していたため、照合は空白（全角・半角）を無視して行う。
+const repNameKey = (name) => String(name || '').replace(/[\s　]+/g, '')
 function resolveRepName(repNames, parsedName) {
-  const matched = repNames.find((n) => n === parsedName) || repNames.find((n) => n.startsWith(parsedName) || parsedName.startsWith(n))
+  const key = repNameKey(parsedName)
+  const matched = repNames.find((n) => repNameKey(n) === key) || repNames.find((n) => repNameKey(n).startsWith(key) || key.startsWith(repNameKey(n)))
   if (matched) return { repNames, matched, created: false }
   return { repNames: [...repNames, parsedName], matched: parsedName, created: true }
 }

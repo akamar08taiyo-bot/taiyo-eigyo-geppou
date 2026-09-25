@@ -836,13 +836,20 @@ export function SalesReportView({ officeName, fiscalYear: appFiscalYear, importA
 
   async function handlePdf() {
     setPdfBusy(true)
-    document.body.classList.add('srv-printing')
+    // PDFは画面の見た目をそのまま画像化するため、@media print 用の「ボタン・タブを隠す」指定が効かない。
+    // 以前は操作ボタンやタブまでPDFに写り、横に長い訪問実績表は画面の幅で切れて右側の列が欠けていた。
+    // PDF作成中だけ srv-pdf-capture を付けて同じものを隠し、表は幅いっぱいに広げてから取り込む。
+    document.body.classList.add('srv-printing', 'srv-pdf-capture')
+    const area = document.querySelector('#srv-print-area')
+    const previousWidth = area ? area.style.width : ''
     try {
-      await downloadElementPdf({ selector: '#srv-print-area', fileName: `${officeName}_営業月報_${MONTH_LABELS[monthKey]}.pdf` })
+      if (area) area.style.width = `${Math.max(area.clientWidth, area.scrollWidth)}px`
+      await downloadElementPdf({ selector: '#srv-print-area', fileName: `${officeName}_営業月報_${MONTH_LABELS[monthKey]}.pdf`, orientation: 'landscape' })
     } catch (err) {
       window.alert(err.message || 'PDFの作成に失敗しました。')
     } finally {
-      document.body.classList.remove('srv-printing')
+      if (area) area.style.width = previousWidth
+      document.body.classList.remove('srv-printing', 'srv-pdf-capture')
       setPdfBusy(false)
     }
   }
