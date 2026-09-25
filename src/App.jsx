@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { api, setCsrfToken } from './api'
 import { AnalysisView } from './components/AnalysisView'
 import { ProviderSalesView } from './components/ProviderSalesView'
@@ -43,9 +43,12 @@ export default function App() {
   const [importBusy, setImportBusy] = useState(false)
   const [importVersion, setImportVersion] = useState(0)
 
+  const toastTimerRef = useRef(null)
   function notify(message, type = 'success', duration = 4800) {
     setToast({ message, type })
-    window.setTimeout(() => setToast(null), duration)
+    // 前のトーストのタイマーが残っていると、新しいトーストが早く消えてしまうので止めてから張り直す
+    window.clearTimeout(toastTimerRef.current)
+    toastTimerRef.current = window.setTimeout(() => setToast(null), duration)
   }
 
   // 保存・読み込みの失敗（COMMON-06）。データ層(salesReportData.js)からの通知を
@@ -143,9 +146,11 @@ export default function App() {
       catch (error) { errors.push(`${file.name}：${error.message || '取り込みに失敗しました。'}`) }
     }
     setImportBusy(false)
-    if (results.length) { notify(results.join(' / '), errors.length ? 'error' : 'success'); setImportVersion((v) => v + 1) }
-    if (errors.length && !results.length) notify(errors.join('、'), 'error')
-    else if (errors.length) notify(`一部失敗：${errors.join('、')}`, 'error')
+    if (results.length) setImportVersion((v) => v + 1)
+    // 成功と失敗が混在したときも、取り込めた内容が失敗の通知で上書きされて見えなくならないよう1つにまとめる
+    if (results.length && !errors.length) notify(results.join(' / '))
+    else if (results.length) notify(`${results.join(' / ')} / 一部失敗：${errors.join('、')}`, 'error', 12000)
+    else if (errors.length) notify(errors.join('、'), 'error')
   }
 
   const selectedStaffName = useMemo(() => staff.find((person) => person.id === selectedStaffId)?.name || '', [staff, selectedStaffId])
