@@ -7,7 +7,7 @@ import {
   HANBAI_ITEMS, emptyHanbaiUchiwake, sumHanbaiUchiwake,
   emptyTarget,
   getOfficeReport, updateOfficeReport, updateRepEntry, addRep, removeRep,
-  getYearMonths, listFiscalYears, DEFAULT_FISCAL_YEAR,
+  getYearMonths, listFiscalYears, DEFAULT_FISCAL_YEAR, salesWithCumulativeFallback,
   RENTAL_GROWTH_MONTHS, repBudgetOf, officeBudgetOf,
 } from '../salesReportData'
 import { downloadElementPdf } from '../pdf-export'
@@ -53,11 +53,11 @@ function BigField({ label, value, onChange, suffix }) {
 }
 
 // 実績／予算／予算差を縦に3段並べた列。列見出し（実績値）と予算差だけ色付けする。
-function BudgetCell({ label, jisseki, yosan }) {
+function BudgetCell({ label, jisseki, yosan, derived }) {
   const diff = (jisseki || 0) - (yosan || 0)
   return (
     <div className="srv-budget-cell">
-      <div className="srv-budget-line srv-budget-actual"><span>{label}</span><b>{yen(jisseki)}<em>千円</em></b></div>
+      <div className="srv-budget-line srv-budget-actual"><span>{label}{derived && <small title="年度累計が未入力のため、4月からの単月の合計を表示しています">（単月の合計）</small>}</span><b>{yen(jisseki)}<em>千円</em></b></div>
       <div className="srv-budget-line"><span>予算</span><b>{yen(yosan)}<em>千円</em></b></div>
       <div className={`srv-budget-line srv-budget-diff ${diff >= 0 ? 'srv-plus' : 'srv-minus'}`}><span>予算差</span><b>{yen(diff)}<em>千円</em></b></div>
     </div>
@@ -85,7 +85,8 @@ function ThreerowCell({ label, value, onChange, editable }) {
 // 住宅改修／商品販売／物販合計（単月・年度累計）を色分けして表示する。営業所合計・個人ページ共通。
 // 個人ページ（editable=true）では新規納品・前月回収・当月回収・目標値をここで直接修正できる
 // （担当者タブ下部の「月間売上・年度累計」欄との重複表示を避けるため、入力箇所はここに一本化している）。
-function SalesSummaryBlock({ sales, monthLabel, fiscalYear, editable, onChangeSales }) {
+function SalesSummaryBlock({ sales, monthLabel, fiscalYear, editable, onChangeSales, derived }) {
+  const d = (...keys) => keys.some((k) => derived?.has(k))
   const hanbaiYosanKei = (sales.hanbaiYosan || 0) + (sales.kaishuuYosan || 0)
   const hanbaiUriageKei = (sales.hanbaiUriage || 0) + (sales.kaishuuUriage || 0)
   const hanbaiYosanKeiAtsumu = (sales.hanbaiYosanAtsumu || 0) + (sales.kaishuuYosanAtsumu || 0)
@@ -97,7 +98,7 @@ function SalesSummaryBlock({ sales, monthLabel, fiscalYear, editable, onChangeSa
       <div className="srv-sales-group srv-sales-group-rental">
         <div className="srv-budget-row-3">
           <BudgetCell label={`${monthLabel}レンタル実績値`} jisseki={sales.rentalJissekiTanki} yosan={sales.rentalYosanTanki} />
-          <BudgetCell label={`${fiscalYear}年度累計レンタル実績値`} jisseki={sales.rentalJissekiAtsumu} yosan={sales.rentalYosanAtsumu} />
+          <BudgetCell label={`${fiscalYear}年度累計レンタル実績値`} jisseki={sales.rentalJissekiAtsumu} yosan={sales.rentalYosanAtsumu} derived={d('rentalJissekiAtsumu', 'rentalYosanAtsumu')} />
         </div>
         <div className="srv-threerow srv-threerow-5">
           <ThreerowCell label={`${monthLabel}新規納品金額`} value={sales.rentalNouhinKeikei} editable={editable} onChange={(v) => onChangeSales?.('rentalNouhinKeikei', v)} />
@@ -114,9 +115,9 @@ function SalesSummaryBlock({ sales, monthLabel, fiscalYear, editable, onChangeSa
           <BudgetCell label={`${monthLabel}物販合計`} jisseki={hanbaiUriageKei} yosan={hanbaiYosanKei} />
         </div>
         <div className="srv-budget-row-3">
-          <BudgetCell label={`住宅改修${fiscalYear}年度累計金額`} jisseki={sales.kaishuuUriageAtsumu} yosan={sales.kaishuuYosanAtsumu} />
-          <BudgetCell label={`商品販売${fiscalYear}年度累計金額`} jisseki={sales.hanbaiUriageAtsumu} yosan={sales.hanbaiYosanAtsumu} />
-          <BudgetCell label={`物販${fiscalYear}年度累計金額`} jisseki={hanbaiUriageKeiAtsumu} yosan={hanbaiYosanKeiAtsumu} />
+          <BudgetCell label={`住宅改修${fiscalYear}年度累計金額`} jisseki={sales.kaishuuUriageAtsumu} yosan={sales.kaishuuYosanAtsumu} derived={d('kaishuuUriageAtsumu', 'kaishuuYosanAtsumu')} />
+          <BudgetCell label={`商品販売${fiscalYear}年度累計金額`} jisseki={sales.hanbaiUriageAtsumu} yosan={sales.hanbaiYosanAtsumu} derived={d('hanbaiUriageAtsumu', 'hanbaiYosanAtsumu')} />
+          <BudgetCell label={`物販${fiscalYear}年度累計金額`} jisseki={hanbaiUriageKeiAtsumu} yosan={hanbaiYosanKeiAtsumu} derived={d('hanbaiUriageAtsumu', 'hanbaiYosanAtsumu', 'kaishuuUriageAtsumu', 'kaishuuYosanAtsumu')} />
         </div>
       </div>
     </div>
@@ -172,7 +173,13 @@ function OfficeSummaryView({ report, fiscalYear, monthKey }) {
   const reps = report.repNames
 
   const officeVisit = useMemo(() => sumVisits(reps.map((n) => monthData.reps[n]?.visit || emptyVisit())), [reps, monthData])
-  const officeSales = useMemo(() => sumSalesFigures(reps.map((n) => monthData.reps[n]?.sales || emptySalesFigures())), [reps, monthData])
+  const officeCumulative = useMemo(() => {
+    const months = getYearMonths(report, fiscalYear)
+    const perRep = reps.map((n) => salesWithCumulativeFallback(months, n, monthKey))
+    const derived = new Set(perRep.flatMap((r) => [...r.derived]))
+    return { sales: sumSalesFigures(perRep.map((r) => r.sales)), derived }
+  }, [report, fiscalYear, monthKey, reps])
+  const officeSales = officeCumulative.sales
   const officeHanbai = useMemo(() => sumHanbaiUchiwake(reps.map((n) => monthData.reps[n]?.hanbai || emptyHanbaiUchiwake())), [reps, monthData])
 
   const kaigoKei = reps.reduce((s, n) => s + (monthData.reps[n]?.kaigoRentalJisseki?.houkatsu || 0) + (monthData.reps[n]?.kaigoRentalJisseki?.kyotaku || 0), 0)
@@ -182,7 +189,7 @@ function OfficeSummaryView({ report, fiscalYear, monthKey }) {
 
   return (
     <div className="srv-panel">
-      <SalesSummaryBlock sales={officeSales} monthLabel={MONTH_LABELS[monthKey]} fiscalYear={fiscalYear} />
+      <SalesSummaryBlock sales={officeSales} derived={officeCumulative.derived} monthLabel={MONTH_LABELS[monthKey]} fiscalYear={fiscalYear} />
 
       <div className="srv-card">
         <b>訪問実績（担当者別・営業所計）</b>
@@ -256,7 +263,7 @@ function OfficeSummaryView({ report, fiscalYear, monthKey }) {
 }
 
 /* ---------- 担当者ビュー（大きな入力欄） ---------- */
-function RepEditView({ repName, entry, onChange, goals, monthKeyOfEntry, fiscalYearOfEntry }) {
+function RepEditView({ repName, entry, onChange, goals, monthKeyOfEntry, fiscalYearOfEntry, months }) {
   const visit = entry.visit || emptyVisit()
   const sales = entry.sales || emptySalesFigures()
   const hanbai = entry.hanbai || emptyHanbaiUchiwake()
@@ -265,6 +272,8 @@ function RepEditView({ repName, entry, onChange, goals, monthKeyOfEntry, fiscalY
 
   const setVisit = (k, v) => onChange({ visit: { ...visit, [k]: v } })
   const setSales = (k, v) => onChange({ sales: { ...sales, [k]: v } })
+  // 上部の集計欄は、年度累計が未入力なら単月の合計で補って表示する（入力値そのものは変えない）
+  const summary = salesWithCumulativeFallback({ ...(months || {}), [monthKeyOfEntry]: { reps: { [repName]: { sales } } } }, repName, monthKeyOfEntry)
   const setHanbai = (item, k, v) => onChange({ hanbai: { ...hanbai, [item]: { ...hanbai[item], [k]: v } } })
 
   const hanbaiKei = HANBAI_ITEMS.reduce((acc, item) => {
@@ -275,7 +284,7 @@ function RepEditView({ repName, entry, onChange, goals, monthKeyOfEntry, fiscalY
 
   return (
     <div className="srv-panel">
-      <SalesSummaryBlock sales={sales} monthLabel={MONTH_LABELS[monthKeyOfEntry]} fiscalYear={fiscalYearOfEntry} editable onChangeSales={setSales} />
+      <SalesSummaryBlock sales={summary.sales} derived={summary.derived} monthLabel={MONTH_LABELS[monthKeyOfEntry]} fiscalYear={fiscalYearOfEntry} editable onChangeSales={setSales} />
 
       {/* 23列あるので印刷時は段組みせず全幅で出す（srv-visit-card を目印にする） */}
       <div className="srv-card srv-visit-card">
@@ -471,7 +480,7 @@ function MonthlyReportTab({ officeName, report, fiscalYear, setFiscalYear, month
             <span>{activeRep} の入力</span>
             <button className="srv-rep-delete-btn" onClick={() => { if (window.confirm(activeRep + 'を削除しますか？（全ての年度・月の入力データも消えます）')) { removeRep(officeName, activeRep); setActiveRep('__office__'); refresh() } }}>この担当者を削除</button>
           </div>
-          <RepEditView repName={activeRep} entry={currentEntry} onChange={(patch) => patchRep(activeRep, patch)} goals={report.goals} monthKeyOfEntry={monthKey} fiscalYearOfEntry={fiscalYear} />
+          <RepEditView repName={activeRep} entry={currentEntry} onChange={(patch) => patchRep(activeRep, patch)} goals={report.goals} monthKeyOfEntry={monthKey} fiscalYearOfEntry={fiscalYear} months={getYearMonths(report, fiscalYear)} />
         </>
       ) : (
         <div className="srv-card"><div className="srv-empty">担当者データがありません</div></div>

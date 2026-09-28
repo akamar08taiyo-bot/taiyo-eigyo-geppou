@@ -487,4 +487,26 @@ export function cumulativeSalesThrough(report, fiscalYear, monthKey) {
   return totals
 }
 
+// 年度累計の欄が未入力（0）のときは、4月〜対象月の単月の値を合計して表示に使う。
+// 手入力で単月だけ入れた場合に年度累計が0のままになるのを防ぐ（入力済みの年度累計はそのまま優先）。
+const ATSUMU_FROM_TANKI = {
+  rentalYosanAtsumu: 'rentalYosanTanki',
+  rentalJissekiAtsumu: 'rentalJissekiTanki',
+  hanbaiYosanAtsumu: 'hanbaiYosan',
+  hanbaiUriageAtsumu: 'hanbaiUriage',
+  kaishuuYosanAtsumu: 'kaishuuYosan',
+  kaishuuUriageAtsumu: 'kaishuuUriage',
+}
+export function salesWithCumulativeFallback(months, repName, monthKey) {
+  const sales = { ...emptySalesFigures(), ...(months?.[monthKey]?.reps?.[repName]?.sales || {}) }
+  const derived = new Set()
+  const upTo = MONTH_KEYS.slice(0, MONTH_KEYS.indexOf(monthKey) + 1)
+  for (const [atsumuKey, tankiKey] of Object.entries(ATSUMU_FROM_TANKI)) {
+    if (Number(sales[atsumuKey] || 0) !== 0) continue
+    const total = upTo.reduce((acc, k) => acc + Number(months?.[k]?.reps?.[repName]?.sales?.[tankiKey] || 0), 0)
+    if (total !== 0) { sales[atsumuKey] = total; derived.add(atsumuKey) }
+  }
+  return { sales, derived }
+}
+
 export { emptyOfficeSeed, defaultRepEntry }
