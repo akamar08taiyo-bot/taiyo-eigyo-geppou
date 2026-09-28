@@ -61,6 +61,12 @@ export async function downloadElementPdf({ selector, fileName, orientation = 'po
   const [{ default: html2canvas }, { jsPDF }] = await Promise.all([import('html2canvas'), import('jspdf')])
   if (document.fonts?.ready) await document.fonts.ready
 
+  // 改ページでカードや表の行が上下に割れないよう、キャプチャ前に「切ってよい位置」を調べておく
+  const sourceRect = source.getBoundingClientRect()
+  const blocks = [...source.querySelectorAll('tr, p, li, h1, h2, h3, h4, div, section, table, article')]
+    .map((el) => { const r = el.getBoundingClientRect(); return { top: r.top - sourceRect.top, bottom: r.bottom - sourceRect.top } })
+    .filter((r) => r.bottom > r.top)
+
   const canvas = await html2canvas(source, { backgroundColor: '#ffffff', logging: false, scale: 2, useCORS: true })
   const pdf = new jsPDF({ orientation, unit: 'mm', format: 'a4', compress: true })
   const pageWidth = pdf.internal.pageSize.getWidth()
@@ -70,17 +76,34 @@ export async function downloadElementPdf({ selector, fileName, orientation = 'po
   const usableHeight = pageHeight - margin * 2
   const ratio = usableWidth / canvas.width
   const pageHeightPx = Math.max(1, Math.floor(usableHeight / ratio))
-  const totalPages = Math.max(1, Math.ceil(canvas.height / pageHeightPx))
+  const pxPerCss = canvas.width / (sourceRect.width || canvas.width)
+  // 1ページの4割より小さいまとまり（カード・行・段落など）をまたがない位置だけを改ページ候補にする
+  const atomic = blocks.filter((r) => (r.bottom - r.top) * pxPerCss <= pageHeightPx * 0.4)
+  const candidates = [...new Set(blocks.map((r) => Math.round(r.bottom * pxPerCss)))].sort((p, q) => p - q)
+  const straddles = (yPx) => atomic.some((r) => r.top * pxPerCss < yPx - 1 && r.bottom * pxPerCss > yPx + 1)
+  const slices = []
+  for (let y = 0; y < canvas.height - 2;) {
+    let h = Math.min(pageHeightPx, canvas.height - y)
+    if (y + h < canvas.height - 2) {
+      let cut = 0
+      for (const c of candidates) {
+        if (c > y + pageHeightPx * 0.5 && c <= y + pageHeightPx && !straddles(c)) cut = c
+      }
+      if (cut) h = cut - y
+    }
+    slices.push([y, h])
+    y += h
+  }
 
-  for (let index = 0; index < totalPages; index += 1) {
-    const sliceHeightPx = Math.min(pageHeightPx, canvas.height - index * pageHeightPx)
+  for (let index = 0; index < slices.length; index += 1) {
+    const [sliceTop, sliceHeightPx] = slices[index]
     const sliceCanvas = document.createElement('canvas')
     sliceCanvas.width = canvas.width
     sliceCanvas.height = sliceHeightPx
     const ctx = sliceCanvas.getContext('2d')
     ctx.fillStyle = '#ffffff'
     ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height)
-    ctx.drawImage(canvas, 0, index * pageHeightPx, canvas.width, sliceHeightPx, 0, 0, canvas.width, sliceHeightPx)
+    ctx.drawImage(canvas, 0, sliceTop, canvas.width, sliceHeightPx, 0, 0, canvas.width, sliceHeightPx)
     const imageHeightMm = sliceHeightPx * ratio
     if (index > 0) pdf.addPage('a4', orientation)
     pdf.addImage(sliceCanvas.toDataURL('image/jpeg', 0.94), 'JPEG', margin, margin, usableWidth, imageHeightMm, undefined, 'FAST')
