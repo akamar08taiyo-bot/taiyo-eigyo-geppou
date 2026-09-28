@@ -68,7 +68,7 @@ test('保存データが破損していても自動初期化せず、破損デ�
   globalThis.localStorage.setItem('taiyo-sales-report-v1', '{壊れたJSON')
   const messages = []
   const unsubscribe = onSaveIssue((m) => messages.push(m))
-  // 行橋営業所は初期シードを持つため、シードの有無に依存しない営業所で検証する
+  // 営業所によらず空の状態から始まることを前提に検証する
   const report = getOfficeReport('小倉営業所')
   unsubscribe()
 

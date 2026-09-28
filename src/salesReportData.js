@@ -1,5 +1,5 @@
 // 営業月報：所長が使っていたExcel（年間予算進捗と対応策）を再現するデータ層。
-// 4月分は実際のExcelの数字をそのまま初期値として入れている。5月以降は空欄から手入力していく想定。
+// 初期値は空欄。手入力またはExcel取込で入力していく。
 const STORE_KEY = 'taiyo-sales-report-v1'
 
 export const MONTH_KEYS = ['04', '05', '06', '07', '08', '09', '10', '11', '12', '01', '02', '03']
@@ -105,87 +105,6 @@ function defaultRepEntry(overrides = {}) {
   }
 }
 
-// ============ 4月の実データ（行橋営業所・4名）をそのまま初期値に ============
-const APR_SEED_REPS = {
-  '久保匠史': defaultRepEntry({
-    visit: { houkatsu: 22, kyotaku: 16, shisetsu: 13, kojin: 64, yakusho: 1, rentalSoudan: 12, rentalKaigo: 9, rentalJihi: 1, rentalKaishu: 6, rentalKoukan: 2, hanbaiSoudan: 12, hanbaiNouhin: 8, kaishuSoudan: 16, kaishuGenba: 5, kaishuKouji: 18, keikakusho: 10, monitoring: 20, tantousha: 6, claim: 0, shukin: 2, doukou: 0, sonota: 66, kadou: 20 },
-    sales: { rentalNouhinKeikei: 187, zenGetsuKaishu: 177, mokuhyou: 185, touGetsuKaishu: 217, hanbaiYosan: 1050, hanbaiUriage: 1604, kaishuuYosan: 400, kaishuuUriage: 591, rentalYosanAtsumu: 2410, rentalJissekiAtsumu: 2499 },
-    hanbai: {
-      '①住宅改修': { yosanKensu: 4, yosanUriage: 400, jissekiKensu: 6, jissekiUriage: 591 },
-      '②特定福祉用具': { yosanKensu: 3, yosanUriage: 100, jissekiKensu: 3, jissekiUriage: 112 },
-      '③一般福祉用具': { yosanKensu: 0, yosanUriage: 300, jissekiKensu: 0, jissekiUriage: 442 },
-      '④紙おむつ販売': { yosanKensu: 0, yosanUriage: 300, jissekiKensu: 0, jissekiUriage: 323 },
-      '⑤消耗品販売': { yosanKensu: 0, yosanUriage: 350, jissekiKensu: 0, jissekiUriage: 727 },
-    },
-    targets: {
-      '行橋高齢者': { lastMar: { count: 18, sales: 150 }, thisMonth: { count: 18, sales: 150 } },
-      '長狭高齢者': { lastMar: { count: 22, sales: 184 }, thisMonth: { count: 22, sales: 184 } },
-      '包括かんだ': { lastMar: { count: 22, sales: 173 }, thisMonth: { count: 22, sales: 173 } },
-      '包括おばせ': { lastMar: { count: 33, sales: 304 }, thisMonth: { count: 33, sales: 304 } },
-      '苅田社協': { lastMar: { count: 25, sales: 358 }, thisMonth: { count: 25, sales: 358 } },
-    },
-    kaigoRentalJisseki: { houkatsu: 6, kyotaku: 1 },
-    tokkaBedJisseki: { houkatsu: 3, kyotaku: 0 },
-    houmonJisseki: { houkatsu: 22, kyotaku: 11 },
-    soukatsu: '年度始めとしては良いスタートをきることができました。特に包括については、依頼が重なり上手くベースアップに繋がることが出来ています。\nまた、消耗品販売については昨年度末に獲得した商材の売上やGW前の駆け込み、花王値上げ前の注文集中により、大きく予算を超過出来ました。',
-    jigetsuTaisaku: '中東情勢の影響により、消耗品販売の売上に大きく影響が出てくる可能性があります。物価高騰助成金などを利用し、それ以外の売上を伸ばせるように、視点を変えた営業を行っていきたいと思います。',
-  }),
-  '土居翔太': defaultRepEntry({
-    visit: { houkatsu: 40, kyotaku: 57, shisetsu: 43, kojin: 69, yakusho: 10, rentalSoudan: 11, rentalKaigo: 14, rentalJihi: 2, rentalKaishu: 9, rentalKoukan: 4, hanbaiSoudan: 4, hanbaiNouhin: 30, kaishuSoudan: 2, kaishuGenba: 2, kaishuKouji: 3, keikakusho: 29, monitoring: 12, tantousha: 22, claim: 0, shukin: 8, doukou: 0, sonota: 128, kadou: 21 },
-    sales: { rentalNouhinKeikei: 0, zenGetsuKaishu: 0, mokuhyou: 0, touGetsuKaishu: 0, hanbaiYosan: 1150, hanbaiUriage: 1437, kaishuuYosan: 250, kaishuuUriage: 173, rentalYosanAtsumu: 1570, rentalJissekiAtsumu: 1609 },
-  }),
-  '宮村茉梨香': defaultRepEntry({
-    visit: { houkatsu: 50, kyotaku: 111, shisetsu: 25, kojin: 54, yakusho: 10, rentalSoudan: 5, rentalKaigo: 16, rentalJihi: 3, rentalKaishu: 7, rentalKoukan: 6, hanbaiSoudan: 4, hanbaiNouhin: 12, kaishuSoudan: 0, kaishuGenba: 5, kaishuKouji: 1, keikakusho: 27, monitoring: 12, tantousha: 15, claim: 0, shukin: 7, doukou: 7, sonota: 180, kadou: 20 },
-    sales: { rentalNouhinKeikei: 0, zenGetsuKaishu: 0, mokuhyou: 0, touGetsuKaishu: 0, hanbaiYosan: 800, hanbaiUriage: 1061, kaishuuYosan: 150, kaishuuUriage: 425, rentalYosanAtsumu: 1570, rentalJissekiAtsumu: 1616 },
-  }),
-  '信田裕太': defaultRepEntry({
-    visit: { houkatsu: 0, kyotaku: 0, shisetsu: 60, kojin: 45, yakusho: 20, rentalSoudan: 0, rentalKaigo: 6, rentalJihi: 1, rentalKaishu: 12, rentalKoukan: 8, hanbaiSoudan: 0, hanbaiNouhin: 43, kaishuSoudan: 0, kaishuGenba: 0, kaishuKouji: 0, keikakusho: 15, monitoring: 4, tantousha: 6, claim: 0, shukin: 12, doukou: 8, sonota: 31, kadou: 21 },
-    sales: { rentalNouhinKeikei: 0, zenGetsuKaishu: 0, mokuhyou: 0, touGetsuKaishu: 0, hanbaiYosan: 0, hanbaiUriage: 0, kaishuuYosan: 0, kaishuuUriage: 0, rentalYosanAtsumu: 0, rentalJissekiAtsumu: 0 },
-  }),
-}
-
-// 5月〜7月（2026年度）の訪問実績：久保匠史さんの訪問ログ（訪問.xls）を実施内容タグごとに集計した実数値。
-// 他の担当者分のログは未提供のため、提供され次第ここに追記する。
-const FY2026_MAY_JUL_VISIT = {
-  '05': { houkatsu: 21, kyotaku: 23, shisetsu: 24, kojin: 68, yakusho: 1, rentalSoudan: 17, rentalKaigo: 13, rentalJihi: 2, rentalKaishu: 2, rentalKoukan: 2, hanbaiSoudan: 19, hanbaiNouhin: 11, kaishuSoudan: 12, kaishuGenba: 12, kaishuKouji: 1, keikakusho: 33, monitoring: 22, tantousha: 31, claim: 0, shukin: 5, doukou: 0, sonota: 51, kadou: 18 },
-  '06': { houkatsu: 18, kyotaku: 15, shisetsu: 18, kojin: 88, yakusho: 0, rentalSoudan: 20, rentalKaigo: 15, rentalJihi: 3, rentalKaishu: 5, rentalKoukan: 3, hanbaiSoudan: 14, hanbaiNouhin: 21, kaishuSoudan: 10, kaishuGenba: 10, kaishuKouji: 6, keikakusho: 32, monitoring: 18, tantousha: 32, claim: 0, shukin: 16, doukou: 0, sonota: 35, kadou: 22 },
-  '07': { houkatsu: 17, kyotaku: 18, shisetsu: 14, kojin: 74, yakusho: 0, rentalSoudan: 10, rentalKaigo: 13, rentalJihi: 2, rentalKaishu: 6, rentalKoukan: 2, hanbaiSoudan: 6, hanbaiNouhin: 15, kaishuSoudan: 7, kaishuGenba: 7, kaishuKouji: 3, keikakusho: 31, monitoring: 17, tantousha: 31, claim: 0, shukin: 8, doukou: 0, sonota: 53, kadou: 20 },
-}
-
-// 前年度（2025年度：2025年4月〜2026年3月）の訪問実績：久保匠史さんのみ、訪問.xlsから復元（4月・5月・6月分はログ範囲外のため空欄）。
-// 前年比較のため年度切り替えで参照できるようにしている。
-const FY2025_KUBO_VISIT = {
-  '07': { houkatsu: 15, kyotaku: 18, shisetsu: 14, kojin: 44, yakusho: 0, rentalSoudan: 10, rentalKaigo: 15, rentalJihi: 1, rentalKaishu: 8, rentalKoukan: 0, hanbaiSoudan: 14, hanbaiNouhin: 11, kaishuSoudan: 8, kaishuGenba: 8, kaishuKouji: 5, keikakusho: 20, monitoring: 13, tantousha: 18, claim: 0, shukin: 12, doukou: 0, sonota: 50, kadou: 20 },
-  '08': { houkatsu: 34, kyotaku: 32, shisetsu: 13, kojin: 61, yakusho: 0, rentalSoudan: 14, rentalKaigo: 10, rentalJihi: 0, rentalKaishu: 3, rentalKoukan: 1, hanbaiSoudan: 7, hanbaiNouhin: 9, kaishuSoudan: 9, kaishuGenba: 9, kaishuKouji: 7, keikakusho: 28, monitoring: 17, tantousha: 22, claim: 0, shukin: 10, doukou: 0, sonota: 79, kadou: 19 },
-  '09': { houkatsu: 23, kyotaku: 16, shisetsu: 9, kojin: 60, yakusho: 0, rentalSoudan: 14, rentalKaigo: 17, rentalJihi: 1, rentalKaishu: 7, rentalKoukan: 0, hanbaiSoudan: 6, hanbaiNouhin: 7, kaishuSoudan: 15, kaishuGenba: 15, kaishuKouji: 7, keikakusho: 24, monitoring: 16, tantousha: 21, claim: 0, shukin: 4, doukou: 0, sonota: 55, kadou: 18 },
-  '10': { houkatsu: 26, kyotaku: 21, shisetsu: 10, kojin: 79, yakusho: 2, rentalSoudan: 11, rentalKaigo: 16, rentalJihi: 1, rentalKaishu: 5, rentalKoukan: 6, hanbaiSoudan: 5, hanbaiNouhin: 8, kaishuSoudan: 14, kaishuGenba: 14, kaishuKouji: 6, keikakusho: 26, monitoring: 9, tantousha: 22, claim: 0, shukin: 5, doukou: 0, sonota: 58, kadou: 21 },
-  '11': { houkatsu: 26, kyotaku: 25, shisetsu: 14, kojin: 41, yakusho: 2, rentalSoudan: 8, rentalKaigo: 8, rentalJihi: 0, rentalKaishu: 2, rentalKoukan: 1, hanbaiSoudan: 3, hanbaiNouhin: 11, kaishuSoudan: 8, kaishuGenba: 8, kaishuKouji: 2, keikakusho: 16, monitoring: 8, tantousha: 16, claim: 0, shukin: 3, doukou: 0, sonota: 74, kadou: 17 },
-  '12': { houkatsu: 18, kyotaku: 19, shisetsu: 20, kojin: 77, yakusho: 1, rentalSoudan: 9, rentalKaigo: 18, rentalJihi: 2, rentalKaishu: 4, rentalKoukan: 0, hanbaiSoudan: 4, hanbaiNouhin: 8, kaishuSoudan: 13, kaishuGenba: 13, kaishuKouji: 6, keikakusho: 24, monitoring: 10, tantousha: 24, claim: 0, shukin: 7, doukou: 0, sonota: 80, kadou: 20 },
-  '01': { houkatsu: 27, kyotaku: 20, shisetsu: 18, kojin: 68, yakusho: 2, rentalSoudan: 6, rentalKaigo: 8, rentalJihi: 1, rentalKaishu: 10, rentalKoukan: 4, hanbaiSoudan: 7, hanbaiNouhin: 10, kaishuSoudan: 6, kaishuGenba: 6, kaishuKouji: 6, keikakusho: 22, monitoring: 14, tantousha: 21, claim: 0, shukin: 5, doukou: 0, sonota: 65, kadou: 18 },
-  '02': { houkatsu: 20, kyotaku: 20, shisetsu: 14, kojin: 58, yakusho: 1, rentalSoudan: 5, rentalKaigo: 15, rentalJihi: 0, rentalKaishu: 4, rentalKoukan: 0, hanbaiSoudan: 6, hanbaiNouhin: 11, kaishuSoudan: 6, kaishuGenba: 6, kaishuKouji: 2, keikakusho: 29, monitoring: 17, tantousha: 25, claim: 0, shukin: 9, doukou: 0, sonota: 53, kadou: 17 },
-  '03': { houkatsu: 26, kyotaku: 25, shisetsu: 11, kojin: 79, yakusho: 0, rentalSoudan: 11, rentalKaigo: 17, rentalJihi: 3, rentalKaishu: 6, rentalKoukan: 4, hanbaiSoudan: 9, hanbaiNouhin: 14, kaishuSoudan: 6, kaishuGenba: 6, kaishuKouji: 3, keikakusho: 26, monitoring: 19, tantousha: 23, claim: 0, shukin: 5, doukou: 0, sonota: 56, kadou: 20 },
-}
-
-// 売上予算表：営業所計＋担当者ごとの月別予算（レンタル/住宅改修/商品販売、特価ベッド目標台数）
-// 4月の値は実データ、5月以降はExcelの「増加額」方式（前月＋増加額）をそのまま数値化。
-const BUDGET_SEED = {
-  office: {
-    rentalMonthly: [5550, 5575, 5600, 5625, 5625, 5625, 5650, 5675, 5700, 5700, 5700, 5725],
-    kaishuuMonthly: Array(12).fill(800),
-    hanbaiMonthly: Array(12).fill(3000),
-    tokkaBedMonthly: Array(12).fill(4),
-    shouhinhinLastYearAvg: 2430,
-    shouhinhinTargetAvg: 2600,
-    ninzu: 4,
-  },
-  reps: {
-    '久保匠史': { rentalMonthly: [2410, 2415, 2420, 2425, 2425, 2425, 2430, 2435, 2440, 2440, 2440, 2445], kaishuuMonthly: Array(12).fill(400), hanbaiMonthly: Array(12).fill(1050), tokkaBedMonthly: Array(12).fill(1), shouhinhinLastYearAvg: 778, shouhinhinTargetAvg: 828 },
-    '土居翔太': { rentalMonthly: [1570, 1580, 1590, 1600, 1600, 1600, 1610, 1620, 1630, 1630, 1630, 1640], kaishuuMonthly: Array(12).fill(250), hanbaiMonthly: Array(12).fill(1150), tokkaBedMonthly: Array(12).fill(2), shouhinhinLastYearAvg: 1052, shouhinhinTargetAvg: 1102 },
-    '宮村茉梨香': { rentalMonthly: [1570, 1580, 1590, 1600, 1600, 1600, 1610, 1620, 1630, 1630, 1630, 1640], kaishuuMonthly: Array(12).fill(150), hanbaiMonthly: Array(12).fill(800), tokkaBedMonthly: Array(12).fill(2), shouhinhinLastYearAvg: 0, shouhinhinTargetAvg: 0 },
-    '信田裕太': { rentalMonthly: Array(12).fill(0), kaishuuMonthly: Array(12).fill(0), hanbaiMonthly: Array(12).fill(0), tokkaBedMonthly: Array(12).fill(0), shouhinhinLastYearAvg: 0, shouhinhinTargetAvg: 0 },
-  },
-}
-
 /* ============================================================
    売上予算の組み立てロジック
    レンタルはストック（前月の残高に積み上がる）のため、担当者ごとに「4月のスタート値」と
@@ -265,52 +184,6 @@ export function officeBudgetOf(report) {
 }
 
 export const DEFAULT_FISCAL_YEAR = 2026
-const PREV_FISCAL_YEAR = 2025
-
-function fy2026Months() {
-  const months = {}
-  for (const key of MONTH_KEYS) {
-    const reps = {}
-    for (const name of Object.keys(APR_SEED_REPS)) {
-      if (key === '04') reps[name] = APR_SEED_REPS[name]
-      else if (name === '久保匠史' && FY2026_MAY_JUL_VISIT[key]) reps[name] = defaultRepEntry({ visit: FY2026_MAY_JUL_VISIT[key] })
-      else reps[name] = defaultRepEntry()
-    }
-    months[key] = { reps }
-  }
-  return months
-}
-
-function fy2025Months() {
-  const months = {}
-  for (const key of MONTH_KEYS) {
-    const reps = {}
-    for (const name of Object.keys(APR_SEED_REPS)) {
-      reps[name] = name === '久保匠史' && FY2025_KUBO_VISIT[key] ? defaultRepEntry({ visit: FY2025_KUBO_VISIT[key] }) : defaultRepEntry()
-    }
-    months[key] = { reps }
-  }
-  return months
-}
-
-function defaultOfficeSeed() {
-  return {
-    repNames: Object.keys(APR_SEED_REPS),
-    monthsByYear: { [DEFAULT_FISCAL_YEAR]: fy2026Months(), [PREV_FISCAL_YEAR]: fy2025Months() },
-    budget: BUDGET_SEED,
-    goals: DEFAULT_GOALS,
-    kamiTermGoals: { officeName: '東九州営業部・行橋営業所', personName: '久保　匠史', items: [
-      { weight: 1, title: 'レンタル・販売棚卸を2026年9月末に行い、2項目とも誤差を0にすることができる。', s: '', a: 'レンタル・販売棚卸を9月末に行い、2項目とも誤差を0にすることができた。', b: 'レンタル・販売棚卸を9月末に行い、1項目のみ誤差が0だった。', c: '両項目とも誤差があった。', d: '' },
-      { weight: 1, title: '請求停止の福祉用具で毎月120日以上を0件にすることができる。（5月～10月までの所長会議資料で確認。回収遅延報告書を提出し承認されているご利用者は除外）', s: '', a: '90日以上が毎月0件だった。', b: '120日以上が毎月0件だった。', c: '120日以上が1件あった。', d: '120日以上が2件以上あった。' },
-    ], kadaiItems: [
-      { weight: 1, title: '福祉用具サービス計画書（レンタル、レンタル＋販売、販売のみ）を作成し、ご利用者宅へ訪問し署名をもらい、且つケアマネに報告することができる。（営業所全体の評価）', s: '', a: '100%', b: '90%以上', c: 'それ以下の場合', d: '' },
-      { weight: 1, title: '人身・物損事故', s: '', a: '事故ゼロ', b: '物損事故　過失50%超　1件', c: '物損事故　過失50%超　2件以上／物損事故50%超1件かつ人身事故1件以上', d: '人身事故発生　1件／人身事故発生　2件以上' },
-    ] },
-    interviews: { shimoki: '', kamiki: '' },
-    honnendoTaisaku: { honnendo: '　昨年度と同様に特価ベッド、消耗品を中心に営業をおこないます。行橋の６包括、苅田町３包括、みやこ町包括、築上町包括を中心に営業をおこなうことで、販売面の安定に繋げます。\n　消耗品については、ターゲット先を改めて絞り込み事、既存施設に対して定期的に追加商材の案内をおこなうことで、消耗品の上積みをおこないます。', kamiki: '', shimoki: '', honnendoSoukatsu: '', jinendo: '' },
-  }
-}
-
 // 保存・読み込みの失敗をReact側（App.jsx）へ伝えるための簡易購読機構。
 // このファイルはデータ層でReactに依存しないため、イベント通知だけを提供し、
 // 実際のトースト表示は購読側（App.jsx）が行う。
@@ -383,8 +256,9 @@ export function listFiscalYears(report, currentFiscalYear) {
 export function getOfficeReport(officeName) {
   const data = load()
   if (!data.offices[officeName]) {
-    // 実データがあるのは行橋営業所のみ。他営業所は空の状態から開始する。
-    data.offices[officeName] = officeName === '行橋営業所' ? defaultOfficeSeed() : emptyOfficeSeed()
+    // 社員の実名・実績・評価をソースに含めないため、どの営業所も空の状態から開始する。
+    // （既にこの端末に保存されているデータはそのまま使う）
+    data.offices[officeName] = emptyOfficeSeed()
     save(data)
   }
   const migrated = migrateReport(data.offices[officeName])
@@ -406,7 +280,7 @@ function emptyOfficeSeed() {
 
 export function updateOfficeReport(officeName, updater) {
   const data = load()
-  const current = migrateReport(data.offices[officeName] || (officeName === '行橋営業所' ? defaultOfficeSeed() : emptyOfficeSeed()))
+  const current = migrateReport(data.offices[officeName] || emptyOfficeSeed())
   data.offices[officeName] = updater(current)
   save(data)
   return data.offices[officeName]
@@ -613,4 +487,4 @@ export function cumulativeSalesThrough(report, fiscalYear, monthKey) {
   return totals
 }
 
-export { defaultOfficeSeed, defaultRepEntry }
+export { emptyOfficeSeed, defaultRepEntry }
