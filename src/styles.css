@@ -1141,3 +1141,15 @@ th.srv-visit-total-col { background: #eef7f6; color: var(--teal-deep); }
 .srv-budget-diff b { font-size: 17px; }
 .srv-budget-diff.srv-plus b { color: #087f73; }
 .srv-budget-diff.srv-minus b { color: #b0435a; }
+
+/* ---------- PDF保存（画面をそのまま画像化するため @media print が効かない）----------
+   印刷時に隠している操作ボタン・タブ類をPDFでも隠し、横スクロールの表は幅いっぱいに広げる。 */
+body.srv-pdf-capture .sidebar, body.srv-pdf-capture .topbar,
+body.srv-pdf-capture .page-header-actions,
+body.srv-pdf-capture .srv-sub-tabs, body.srv-pdf-capture .srv-month-switch, body.srv-pdf-capture .srv-year-switch, body.srv-pdf-capture .srv-rep-tabs,
+body.srv-pdf-capture .srv-import-card, body.srv-pdf-capture .srv-import-msg, body.srv-pdf-capture .srv-print-bar,
+body.srv-pdf-capture .srv-rep-delete-btn, body.srv-pdf-capture .srv-add-rep, body.srv-pdf-capture .srv-goal-block > button,
+body.srv-pdf-capture .srv-rep-remove, body.srv-pdf-capture .srv-print-hide { display: none !important; }
+body.srv-pdf-capture .srv-table-scroll { overflow: visible !important; }
+body.srv-pdf-capture #srv-print-area { background: #fff; }
+
