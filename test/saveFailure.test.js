@@ -68,7 +68,6 @@ test('保存データが破損していても自動初期化せず、破損デ�
   globalThis.localStorage.setItem('taiyo-sales-report-v1', '{壊れたJSON')
   const messages = []
   const unsubscribe = onSaveIssue((m) => messages.push(m))
-  // 行橋営業所は初期シードを持つため、シードの有無に依存しない営業所で検証する
   const report = getOfficeReport('小倉営業所')
   unsubscribe()
 
@@ -92,4 +91,14 @@ test('正常なデータの読み込みでは通知されない', () => {
   unsubscribe()
   assert.deepEqual(messages, [])
   assert.deepEqual(report.repNames, [])
+})
+
+test('行橋営業所も実績の数字や担当者名を持たない空の状態から始まる', () => {
+  freshStorage()
+  const report = getOfficeReport('行橋営業所')
+  assert.deepEqual(report.repNames, [])
+  assert.deepEqual(report.monthsByYear, {})
+  assert.deepEqual(report.budget.reps, {})
+  assert.equal(report.kamiTermGoals.personName, '')
+  assert.equal(report.honnendoTaisaku.honnendo, '')
 })
