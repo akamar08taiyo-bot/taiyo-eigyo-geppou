@@ -175,20 +175,22 @@ export default function App() {
     pageContent = <ProductAnalysisView officeName={session.office.name} fiscalYear={fiscalYear} setFiscalYear={setFiscalYear} importAction={importButton} refreshKey={importVersion}/>
   }
 
+  // 業務アプリポータルへ戻るボタンは左上：広い画面は左の列のいちばん上、狭い画面は見出しの上の段（全アプリ共通の形 .taiyo-portal-back。
+  // ユーザーの指示「太陽ポータルに戻るボタンは左上に設置。太陽ポータル全アプリ共通にする。色や大きさも含めて統一する」2026-10-28。前は見出しの右の小さな灰色の文字）
   return <div className="app-shell">
     <aside className={`sidebar ${sidebarOpen ? 'is-open' : ''}`}>
-      <div className="sidebar-brand"><span className="brand-symbol">営</span><span>営業月報</span><button className="sidebar-close icon-button" onClick={() => setSidebarOpen(false)}><Icon name="close"/></button></div>
+      <div className="sidebar-portal"><a href="https://akamar08taiyo-bot.github.io/taiyo-portal/" className="taiyo-portal-back">← 業務アプリポータルへ戻る</a></div><div className="sidebar-brand"><span className="brand-symbol">営</span><span>営業月報</span><button className="sidebar-close icon-button" onClick={() => setSidebarOpen(false)}><Icon name="close"/></button></div>
       <nav>{TABS.map(([key, label, icon]) => <button key={key} className={activeTab === key ? 'active' : ''} onClick={() => { setActiveTab(key); setSidebarOpen(false) }}><Icon name={icon}/>{label}</button>)}</nav>
       <div className="sidebar-bottom"><div className="retention-note"><Icon name="info" size={16}/>営業所ごとにデータを保存</div><button onClick={logout}><Icon name="logout"/>ログアウト</button></div>
     </aside>
     {sidebarOpen && <button className="sidebar-scrim" aria-label="メニューを閉じる" onClick={() => setSidebarOpen(false)}/>}
     <main className="main-content">
+      <div className="portal-back-row"><a href="https://akamar08taiyo-bot.github.io/taiyo-portal/" className="taiyo-portal-back">← 業務アプリポータルへ戻る</a></div>
       <header className="topbar">
         <button className="mobile-menu icon-button" onClick={() => setSidebarOpen(true)}><Icon name="menu"/></button>
         <div className="mobile-brand"><span className="brand-symbol">営</span>営業月報</div>
         <div className="office-context"><span>営業所</span><strong>{session.office.name}</strong></div>
         <div className="topbar-spacer"/>
-        <a href="https://akamar08taiyo-bot.github.io/taiyo-portal/" style={{fontSize:'11px',color:'#94a3b8',textDecoration:'none',marginRight:'12px'}}>← 業務アプリポータルへ戻る</a>
         <div className="user-context"><Icon name="user"/><div><strong>{session.user.name}</strong><span>{roleLabel[session.user.role]}</span></div></div>
       </header>
       <div className="page-content">{pageContent}</div>
